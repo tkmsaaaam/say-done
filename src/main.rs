@@ -8,8 +8,7 @@ fn main() {
     for _i in 0..8640 {
         let mut i = 0;
         let output = Command::new("ps").output().expect("failed");
-        let output_str = String::from_utf8_lossy(&output.stdout);
-        for line in output_str.lines() {
+        for line in String::from_utf8_lossy(&output.stdout).lines() {
             if line.contains(&args[1]) {
                 i += 1;
             }
