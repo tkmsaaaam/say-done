@@ -28,7 +28,11 @@ fn main() {
         }
         if !target_process_is_existed {
             if i == 0 {
-                println!("{} is not found. or {} is not started.", args[1], args[1]);
+                println!(
+                    "{} is not found. or {} is not started.\nps result:",
+                    args[1], args[1]
+                );
+                println!("{}", String::from_utf8_lossy(&output.stdout));
                 std::process::exit(0);
             }
             Command::new("say").arg("Done!").output().expect("failed");
