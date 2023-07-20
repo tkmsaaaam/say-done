@@ -40,7 +40,7 @@ fn main() {
                 let arg = String::from("display notification \"")
                     + &args[1]
                     + " was ended.\" with title \""
-                    + &args[1]
+                    + env!("CARGO_PKG_NAME")
                     + "\""; // display notification "CMD was ended." with title "CMD"
                 Command::new("osascript")
                     .arg("-e")
