@@ -36,6 +36,7 @@ fn main() {
                 std::process::exit(0);
             }
             Command::new("say").arg("Done!").output().expect("failed");
+            println!("time: {}s", i * INTERVAL);
             if env::consts::OS == "macos" {
                 let arg = String::from("display notification \"")
                     + &args[1]
@@ -48,9 +49,10 @@ fn main() {
                     .output()
                     .expect("failed");
             }
-            break;
+            std::process::exit(0);
         } else {
             thread::sleep(time::Duration::from_secs(INTERVAL));
         }
     }
+    println!("{} has been running over an hour.", &args[1]);
 }
