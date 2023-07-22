@@ -26,15 +26,15 @@ fn main() {
                 break;
             }
         }
+        if !target_process_is_existed && i == 0 {
+            println!(
+                "{} is not found. or {} is not started.\nps result:",
+                args[1], args[1]
+            );
+            println!("{}", String::from_utf8_lossy(&output.stdout));
+            std::process::exit(0);
+        }
         if !target_process_is_existed {
-            if i == 0 {
-                println!(
-                    "{} is not found. or {} is not started.\nps result:",
-                    args[1], args[1]
-                );
-                println!("{}", String::from_utf8_lossy(&output.stdout));
-                std::process::exit(0);
-            }
             Command::new("say").arg("Done!").output().expect("failed");
             println!("time: {}s", i * INTERVAL);
             if env::consts::OS == "macos" {
@@ -50,9 +50,8 @@ fn main() {
                     .expect("failed");
             }
             std::process::exit(0);
-        } else {
-            thread::sleep(time::Duration::from_secs(INTERVAL));
         }
+        thread::sleep(time::Duration::from_secs(INTERVAL));
     }
     println!("{} has been running over an hour.", &args[1]);
 }
