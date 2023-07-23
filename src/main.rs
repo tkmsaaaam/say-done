@@ -1,14 +1,17 @@
 use std::env;
 use std::process::Command;
 use std::{thread, time};
+use clap::Parser;
+
+#[derive(Parser)]
+struct Args {
+  #[arg(short = 't', long = "target")]
+  target: String,
+}
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() == 1 {
-        println!("CMD is not defined.\nrun: cargo run CMD");
-        std::process::exit(0);
-    }
-    println!("monitoring {}", args[1]);
+    let args = Args::parse();
+    println!("monitoring {}", args.target);
     const INTERVAL: u64 = 10;
     const MAX_MONITERING_TIME: u64 = 60 * 60 * 24;
     let self_pid = std::process::id();
@@ -21,7 +24,7 @@ fn main() {
             if process_splited[0].eq("PID") || process_splited[0].eq(&self_pid.to_string()) {
                 continue;
             }
-            if process_splited[3].starts_with(&args[1]) {
+            if process_splited[3].starts_with(&args.target) {
                 target_process_is_existed = true;
                 break;
             }
@@ -29,7 +32,7 @@ fn main() {
         if !target_process_is_existed && i == 0 {
             println!(
                 "{} is not found. or {} is not started.\nps result:",
-                args[1], args[1]
+                args.target, args.target
             );
             println!("{}", String::from_utf8_lossy(&output.stdout));
             std::process::exit(0);
@@ -39,7 +42,7 @@ fn main() {
             println!("time: {}s", i * INTERVAL);
             if env::consts::OS == "macos" {
                 let arg = String::from("display notification \"")
-                    + &args[1]
+                    + &args.target
                     + " was ended.\" with title \""
                     + env!("CARGO_PKG_NAME")
                     + "\""; // display notification "CMD was ended." with title "CMD"
@@ -53,5 +56,5 @@ fn main() {
         }
         thread::sleep(time::Duration::from_secs(INTERVAL));
     }
-    println!("{} has been running over an hour.", &args[1]);
+    println!("{} has been running over an hour.", &args.target);
 }
