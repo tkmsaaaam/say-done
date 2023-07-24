@@ -1,12 +1,14 @@
+use clap::Parser;
 use std::env;
 use std::process::Command;
 use std::{thread, time};
-use clap::Parser;
 
 #[derive(Parser)]
 struct Args {
-  #[arg(short = 't', long = "target")]
-  target: String,
+    #[arg(short = 't', long = "target")]
+    target: String,
+    #[arg(short = 'p', long = "pid")]
+    pid: Option<String>,
 }
 
 fn main() {
@@ -25,8 +27,18 @@ fn main() {
                 continue;
             }
             if process_splited[3].starts_with(&args.target) {
-                target_process_is_existed = true;
-                break;
+                match args.pid {
+                    Some(ref pid) => {
+                        if process_splited[0].eq(pid) {
+                            target_process_is_existed = true;
+                            break;
+                        }
+                    }
+                    None => {
+                        target_process_is_existed = true;
+                        break;
+                    }
+                }
             }
         }
         if !target_process_is_existed && i == 0 {
