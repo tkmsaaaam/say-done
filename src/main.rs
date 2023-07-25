@@ -21,44 +21,41 @@ fn main() {
     let self_pid = std::process::id();
 
     for i in 0..MAX_MONITERING_TIME / INTERVAL {
-        let mut target_process_is_existed = false;
+        thread::sleep(time::Duration::from_secs(INTERVAL));
         let output = Command::new("ps").output().expect("failed");
+        let mut tty_count = 0;
         for process in String::from_utf8_lossy(&output.stdout).lines() {
             let process_splited: Vec<&str> = process.split_whitespace().collect();
             if process_splited[0].eq("PID") || process_splited[0].eq(&self_pid.to_string()) {
                 continue;
             }
-            if process_splited[3].starts_with(&args.command) {
-                let mut is_pid_present: bool = false;
-                match args.pid {
-                    Some(ref pid) => {
-                        if process_splited[0].eq(pid) {
-                            is_pid_present = true;
-                        }
-                    }
-                    None => {
-                        is_pid_present = true;
-                    }
-                }
 
-                let mut is_tty_present: bool = false;
-                match args.tty {
-                    Some(ref tty) => {
-                        if process_splited[1].eq(tty) {
-                            is_tty_present = true;
+            match args.pid {
+                Some(ref pid) => {
+                    if process_splited[0].eq(pid) {
+                        continue;
+                    }
+                }
+                None => {}
+            }
+
+            match args.tty {
+                Some(ref tty) => {
+                    if process_splited[1].eq(tty) {
+                        tty_count += 1;
+                        if tty_count > 1 {
+                            continue;
                         }
                     }
-                    None => {
-                        is_tty_present = true;
-                    }
                 }
-                if is_pid_present && is_tty_present {
-                    target_process_is_existed = true;
-                    break;
-                }
+                None => {}
+            }
+
+            if process_splited[3].starts_with(&args.command) {
+                continue;
             }
         }
-        if !target_process_is_existed && i == 0 {
+        if i == 0 {
             println!(
                 "{} is not found. or {} is not started.\nps result:",
                 args.command, args.command
@@ -66,24 +63,21 @@ fn main() {
             println!("{}", String::from_utf8_lossy(&output.stdout));
             std::process::exit(0);
         }
-        if !target_process_is_existed {
-            Command::new("say").arg("Done!").output().expect("failed");
-            println!("time: {}s", i * INTERVAL);
-            if env::consts::OS == "macos" {
-                let arg = String::from("display notification \"")
-                    + &args.command
-                    + " was ended.\" with title \""
-                    + env!("CARGO_PKG_NAME")
-                    + "\""; // display notification "CMD was ended." with title "CMD"
-                Command::new("osascript")
-                    .arg("-e")
-                    .arg(arg)
-                    .output()
-                    .expect("failed");
-            }
-            std::process::exit(0);
+        Command::new("say").arg("Done!").output().expect("failed");
+        println!("time: {}s", i * INTERVAL);
+        if env::consts::OS == "macos" {
+            let arg = String::from("display notification \"")
+                + &args.command
+                + " was ended.\" with title \""
+                + env!("CARGO_PKG_NAME")
+                + "\""; // display notification "CMD was ended." with title "CMD"
+            Command::new("osascript")
+                .arg("-e")
+                .arg(arg)
+                .output()
+                .expect("failed");
         }
-        thread::sleep(time::Duration::from_secs(INTERVAL));
+        std::process::exit(0);
     }
     println!("{} has been running over an hour.", &args.command);
 }
