@@ -1,5 +1,5 @@
 use clap::Parser;
-use std::env;
+use std::env::{self};
 use std::process::Command;
 use std::{thread, time};
 
