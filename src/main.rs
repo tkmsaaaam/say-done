@@ -42,37 +42,15 @@ fn main() {
                 continue;
             }
 
-            match args.pid {
-                Some(ref pid) => {
-                    if process_splited[0].eq(pid) {
-                        is_continue = true;
-                        break;
-                    }
-                }
-                None => {}
-            }
-
-            match args.tty {
-                Some(ref tty) => {
-                    if process_splited[1].eq(tty) {
-                        tty_count += 1;
-                        if tty_count > 1 {
-                            is_continue = true;
-                            break;
-                        }
-                    }
-                }
-                None => {}
-            }
-
-            match args.command {
-                Some(ref command) => {
-                    if process_splited[3].starts_with(command) {
-                        is_continue = true;
-                        break;
-                    }
-                }
-                None => {}
+            (is_continue, tty_count) = is_found(
+                args.pid.clone(),
+                args.tty.clone(),
+                args.command.clone(),
+                process_splited,
+                tty_count,
+            );
+            if is_continue {
+                break;
             }
         }
         if is_continue {
@@ -105,4 +83,43 @@ fn main() {
         std::process::exit(0);
     }
     println!("{} has been running over an hour.", &target);
+}
+
+fn is_found(
+    pid: Option<String>,
+    tty: Option<String>,
+    command: Option<String>,
+    process_splited: Vec<&str>,
+    mut tty_count: i32,
+) -> (bool, i32) {
+    match pid {
+        Some(ref pid) => {
+            if process_splited[0].eq(pid) {
+                return (true, tty_count);
+            }
+        }
+        None => {}
+    }
+
+    match tty {
+        Some(ref tty) => {
+            if process_splited[1].eq(tty) {
+                tty_count += 1;
+                if tty_count > 1 {
+                    return (true, tty_count);
+                }
+            }
+        }
+        None => {}
+    }
+
+    match command {
+        Some(ref command) => {
+            if process_splited[3].starts_with(command) {
+                return (true, tty_count);
+            }
+        }
+        None => {}
+    }
+    return (false, tty_count);
 }
