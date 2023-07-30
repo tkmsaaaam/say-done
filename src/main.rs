@@ -123,3 +123,34 @@ fn is_found(
     }
     return (false, tty_count);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_found_true() {
+        let pid = None;
+        let tty = None;
+        let command = Some(String::from("command"));
+        let process_splitted = vec!["00000", "ttys001", "0:00.00", "command"];
+        let mut tty_count = 0;
+        let is_continue;
+        (is_continue, tty_count) = is_found(pid, tty, command, process_splitted, tty_count);
+        assert!(is_continue);
+        assert_eq!(0, tty_count);
+    }
+
+    #[test]
+    fn test_is_found_false() {
+        let pid = None;
+        let tty = None;
+        let command = Some(String::from("ps"));
+        let process_splitted = vec!["00000", "ttys001", "0:00.00", "command"];
+        let mut tty_count = 0;
+        let is_continue;
+        (is_continue, tty_count) = is_found(pid, tty, command, process_splitted, tty_count);
+        assert!(!is_continue);
+        assert_eq!(0, tty_count);
+    }
+}
