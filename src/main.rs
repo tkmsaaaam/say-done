@@ -13,6 +13,13 @@ struct Args {
     tty: Option<String>,
 }
 
+#[derive(Debug)]
+struct Process {
+    pid: String,
+    tty: String,
+    command: String,
+}
+
 fn main() {
     let args = Args::parse();
     if args.command.is_none() && args.pid.is_none() && args.tty.is_none() {
@@ -36,9 +43,10 @@ fn main() {
         let output = Command::new("ps").output().expect("failed");
         let mut tty_count = 0;
         let mut is_continue = false;
-        for process in String::from_utf8_lossy(&output.stdout).lines() {
-            let process_splited: Vec<&str> = process.split_whitespace().collect();
-            if process_splited[0].eq("PID") || process_splited[0].eq(&self_pid.to_string()) {
+        for raw_process in String::from_utf8_lossy(&output.stdout).lines() {
+            let process = make_process(raw_process);
+
+            if process.pid.eq("PID") || process.pid.eq(&self_pid.to_string()) {
                 continue;
             }
 
@@ -46,7 +54,7 @@ fn main() {
                 args.pid.clone(),
                 args.tty.clone(),
                 args.command.clone(),
-                process_splited,
+                process,
                 tty_count,
             );
             if is_continue {
@@ -85,16 +93,26 @@ fn main() {
     println!("{} has been running over an hour.", &target);
 }
 
+fn make_process(process: &str) -> Process {
+    let process_splited: Vec<&str> = process.split_whitespace().collect();
+
+    return Process {
+        pid: process_splited[0].to_owned(),
+        tty: process_splited[1].to_owned(),
+        command: process_splited[3].to_owned(),
+    };
+}
+
 fn is_found(
     pid: Option<String>,
     tty: Option<String>,
     command: Option<String>,
-    process_splited: Vec<&str>,
+    target_process: Process,
     mut tty_count: i32,
 ) -> (bool, i32) {
     match pid {
         Some(ref pid) => {
-            if process_splited[0].eq(pid) {
+            if target_process.pid.eq(pid) {
                 return (true, tty_count);
             }
         }
@@ -103,7 +121,7 @@ fn is_found(
 
     match tty {
         Some(ref tty) => {
-            if process_splited[1].eq(tty) {
+            if target_process.tty.eq(tty) {
                 tty_count += 1;
                 if tty_count > 1 {
                     return (true, tty_count);
@@ -115,7 +133,7 @@ fn is_found(
 
     match command {
         Some(ref command) => {
-            if process_splited[3].starts_with(command) {
+            if target_process.command.starts_with(command) {
                 return (true, tty_count);
             }
         }
@@ -133,10 +151,14 @@ mod tests {
         let pid = None;
         let tty = None;
         let command = Some(String::from("command"));
-        let process_splitted = vec!["00000", "ttys001", "0:00.00", "command"];
+        let target_process = Process {
+            pid: "00000".to_owned(),
+            tty: "ttys001".to_owned(),
+            command: "command".to_owned(),
+        };
         let mut tty_count = 0;
         let is_continue;
-        (is_continue, tty_count) = is_found(pid, tty, command, process_splitted, tty_count);
+        (is_continue, tty_count) = is_found(pid, tty, command, target_process, tty_count);
         assert!(is_continue);
         assert_eq!(0, tty_count);
     }
@@ -146,10 +168,14 @@ mod tests {
         let pid = None;
         let tty = None;
         let command = Some(String::from("ps"));
-        let process_splitted = vec!["00000", "ttys001", "0:00.00", "command"];
+        let target_process = Process {
+            pid: "00000".to_owned(),
+            tty: "ttys001".to_owned(),
+            command: "command".to_owned(),
+        };
         let mut tty_count = 0;
         let is_continue;
-        (is_continue, tty_count) = is_found(pid, tty, command, process_splitted, tty_count);
+        (is_continue, tty_count) = is_found(pid, tty, command, target_process, tty_count);
         assert!(!is_continue);
         assert_eq!(0, tty_count);
     }
