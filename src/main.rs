@@ -95,11 +95,17 @@ fn main() {
 
 fn make_process(process: &str) -> Process {
     let process_splited: Vec<&str> = process.split_whitespace().collect();
+    let mut command = String::from(process_splited[3].to_owned());
+    if process_splited.len() > 4 {
+        for i in 4..process_splited.len() {
+            command = command + " " + process_splited[i]
+        }
+    }
 
     return Process {
         pid: process_splited[0].to_owned(),
         tty: process_splited[1].to_owned(),
-        command: process_splited[3].to_owned(),
+        command,
     };
 }
 
