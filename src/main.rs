@@ -44,11 +44,10 @@ fn main() {
         let mut tty_count = 0;
         let mut is_continue = false;
         for raw_process in String::from_utf8_lossy(&output.stdout).lines() {
-            let process = make_process(raw_process);
-
-            if process.pid.eq("PID") || process.pid.eq(&self_pid.to_string()) {
+            if raw_process.starts_with("PID") || raw_process.starts_with(&self_pid.to_string()) {
                 continue;
             }
+            let process = make_process(raw_process);
 
             (is_continue, tty_count) = is_found(
                 args.pid.clone(),
