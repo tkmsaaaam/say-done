@@ -1,6 +1,6 @@
 use clap::Parser;
 use std::env::{self};
-use std::process::Command;
+use std::process::{Command, Output};
 use std::{thread, time};
 
 #[derive(Parser)]
@@ -37,29 +37,15 @@ fn main() {
     println!("monitoring {}", target);
     const INTERVAL: u64 = 10;
     const MAX_MONITERING_TIME: u64 = 60 * 60 * 24;
-    let self_pid = std::process::id();
 
     for i in 0..MAX_MONITERING_TIME / INTERVAL {
         let output = Command::new("ps").output().expect("failed");
-        let mut tty_count = 0;
-        let mut is_continue = false;
-        for raw_process in String::from_utf8_lossy(&output.stdout).lines() {
-            if raw_process.starts_with("PID") || raw_process.starts_with(&self_pid.to_string()) {
-                continue;
-            }
-            let process = make_process(raw_process);
-
-            (is_continue, tty_count) = is_found(
-                args.pid.clone(),
-                args.tty.clone(),
-                args.command.clone(),
-                process,
-                tty_count,
-            );
-            if is_continue {
-                break;
-            }
-        }
+        let is_continue = is_found(
+            output.clone(),
+            args.pid.clone(),
+            args.tty.clone(),
+            args.command.clone(),
+        );
         if is_continue {
             thread::sleep(time::Duration::from_secs(INTERVAL));
             continue;
@@ -108,7 +94,7 @@ fn make_process(process: &str) -> Process {
     };
 }
 
-fn is_found(
+fn is_matched(
     pid: Option<String>,
     tty: Option<String>,
     command: Option<String>,
@@ -147,12 +133,41 @@ fn is_found(
     return (false, tty_count);
 }
 
+fn is_found(
+    output: Output,
+    pid: Option<String>,
+    tty: Option<String>,
+    command: Option<String>,
+) -> bool {
+    let self_pid = std::process::id();
+    let mut tty_count = 0;
+    for raw_process in String::from_utf8_lossy(&output.stdout).lines() {
+        if raw_process.starts_with("PID") || raw_process.starts_with(&self_pid.to_string()) {
+            continue;
+        }
+        let process = make_process(raw_process);
+        let is_continue;
+
+        (is_continue, tty_count) = is_matched(
+            pid.clone(),
+            tty.clone(),
+            command.clone(),
+            process,
+            tty_count,
+        );
+        if is_continue {
+            return true;
+        }
+    }
+    return false;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_is_found_true() {
+    fn test_is_matched_true() {
         let pid = None;
         let tty = None;
         let command = Some(String::from("command"));
@@ -163,13 +178,13 @@ mod tests {
         };
         let mut tty_count = 0;
         let is_continue;
-        (is_continue, tty_count) = is_found(pid, tty, command, target_process, tty_count);
+        (is_continue, tty_count) = is_matched(pid, tty, command, target_process, tty_count);
         assert!(is_continue);
         assert_eq!(0, tty_count);
     }
 
     #[test]
-    fn test_is_found_false() {
+    fn test_is_matched_false() {
         let pid = None;
         let tty = None;
         let command = Some(String::from("ps"));
@@ -180,7 +195,7 @@ mod tests {
         };
         let mut tty_count = 0;
         let is_continue;
-        (is_continue, tty_count) = is_found(pid, tty, command, target_process, tty_count);
+        (is_continue, tty_count) = is_matched(pid, tty, command, target_process, tty_count);
         assert!(!is_continue);
         assert_eq!(0, tty_count);
     }
