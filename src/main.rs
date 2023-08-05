@@ -3,7 +3,7 @@ use std::env::{self};
 use std::process::{Command, Output};
 use std::{thread, time};
 
-#[derive(Parser)]
+#[derive(Parser, Clone)]
 struct Args {
     #[arg(short = 'c', long = "command")]
     command: Option<String>,
@@ -40,12 +40,7 @@ fn main() {
 
     for i in 0..MAX_MONITERING_TIME / INTERVAL {
         let output = Command::new("ps").output().expect("failed");
-        let is_continue = is_found(
-            output.clone(),
-            args.pid.clone(),
-            args.tty.clone(),
-            args.command.clone(),
-        );
+        let is_continue = is_found(output.clone(), args.clone());
         if is_continue {
             thread::sleep(time::Duration::from_secs(INTERVAL));
             continue;
@@ -94,14 +89,8 @@ fn make_process(process: &str) -> Process {
     };
 }
 
-fn is_matched(
-    pid: Option<String>,
-    tty: Option<String>,
-    command: Option<String>,
-    target_process: Process,
-    mut tty_count: i32,
-) -> (bool, i32) {
-    match pid {
+fn is_matched(args: Args, target_process: Process, mut tty_count: i32) -> (bool, i32) {
+    match args.pid {
         Some(ref pid) => {
             if target_process.pid.eq(pid) {
                 return (true, tty_count);
@@ -110,7 +99,7 @@ fn is_matched(
         None => {}
     }
 
-    match tty {
+    match args.tty {
         Some(ref tty) => {
             if target_process.tty.eq(tty) {
                 tty_count += 1;
@@ -122,7 +111,7 @@ fn is_matched(
         None => {}
     }
 
-    match command {
+    match args.command {
         Some(ref command) => {
             if target_process.command.starts_with(command) {
                 return (true, tty_count);
@@ -133,12 +122,7 @@ fn is_matched(
     return (false, tty_count);
 }
 
-fn is_found(
-    output: Output,
-    pid: Option<String>,
-    tty: Option<String>,
-    command: Option<String>,
-) -> bool {
+fn is_found(output: Output, args: Args) -> bool {
     let self_pid = std::process::id();
     let mut tty_count = 0;
     for raw_process in String::from_utf8_lossy(&output.stdout).lines() {
@@ -148,13 +132,7 @@ fn is_found(
         let process = make_process(raw_process);
         let is_continue;
 
-        (is_continue, tty_count) = is_matched(
-            pid.clone(),
-            tty.clone(),
-            command.clone(),
-            process,
-            tty_count,
-        );
+        (is_continue, tty_count) = is_matched(args.clone(), process, tty_count);
         if is_continue {
             return true;
         }
@@ -168,9 +146,11 @@ mod tests {
 
     #[test]
     fn test_is_matched_true() {
-        let pid = None;
-        let tty = None;
-        let command = Some(String::from("command"));
+        let args = Args {
+            command: Some(String::from("command")),
+            pid: None,
+            tty: None,
+        };
         let target_process = Process {
             pid: "00000".to_owned(),
             tty: "ttys001".to_owned(),
@@ -178,16 +158,18 @@ mod tests {
         };
         let mut tty_count = 0;
         let is_continue;
-        (is_continue, tty_count) = is_matched(pid, tty, command, target_process, tty_count);
+        (is_continue, tty_count) = is_matched(args, target_process, tty_count);
         assert!(is_continue);
         assert_eq!(0, tty_count);
     }
 
     #[test]
     fn test_is_matched_false() {
-        let pid = None;
-        let tty = None;
-        let command = Some(String::from("ps"));
+        let args = Args {
+            command: Some(String::from("ps")),
+            pid: None,
+            tty: None,
+        };
         let target_process = Process {
             pid: "00000".to_owned(),
             tty: "ttys001".to_owned(),
@@ -195,7 +177,7 @@ mod tests {
         };
         let mut tty_count = 0;
         let is_continue;
-        (is_continue, tty_count) = is_matched(pid, tty, command, target_process, tty_count);
+        (is_continue, tty_count) = is_matched(args, target_process, tty_count);
         assert!(!is_continue);
         assert_eq!(0, tty_count);
     }
