@@ -26,14 +26,7 @@ fn main() {
         println!("arg is not present.");
         std::process::exit(0);
     }
-    let target: String;
-    if args.command.is_some() {
-        target = args.command.clone().unwrap()
-    } else if args.pid.is_some() {
-        target = args.pid.clone().unwrap()
-    } else {
-        target = args.tty.clone().unwrap()
-    }
+    let target = make_target(args.clone());
     println!("monitoring {}", target);
     const INTERVAL: u64 = 10;
     const MAX_MONITERING_TIME: u64 = 60 * 60 * 24;
@@ -71,6 +64,16 @@ fn main() {
         std::process::exit(0);
     }
     println!("{} has been running over an hour.", &target);
+}
+
+fn make_target(args: Args) -> String {
+    if args.command.is_some() {
+        return args.command.clone().unwrap();
+    } else if args.pid.is_some() {
+        return args.pid.clone().unwrap();
+    } else {
+        return args.tty.clone().unwrap();
+    }
 }
 
 fn make_process(process: &str) -> Process {
