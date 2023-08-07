@@ -3,7 +3,7 @@ use std::env::{self};
 use std::process::{Command, Output};
 use std::{thread, time};
 
-#[derive(Parser, Clone)]
+#[derive(Debug, Parser, Clone)]
 struct Args {
     #[arg(short = 'c', long = "command")]
     command: Option<String>,
@@ -13,7 +13,6 @@ struct Args {
     tty: Option<String>,
 }
 
-#[derive(Debug)]
 struct Process {
     pid: String,
     tty: String,
