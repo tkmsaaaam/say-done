@@ -32,7 +32,8 @@ fn main() {
 
     for i in 0..MAX_MONITERING_TIME / INTERVAL {
         let output = Command::new("ps").output().expect("failed");
-        let is_continue = is_found(output.clone(), args.clone());
+        let process_list = make_process_list(output.clone());
+        let is_continue = is_found(args.clone(), process_list);
         if is_continue {
             thread::sleep(time::Duration::from_secs(INTERVAL));
             continue;
@@ -124,17 +125,24 @@ fn is_matched(args: Args, target_process: Process, mut tty_count: i32) -> (bool,
     return (false, tty_count);
 }
 
-fn is_found(output: Output, args: Args) -> bool {
+fn make_process_list(output: Output) -> Vec<Process> {
     let self_pid = std::process::id();
+    return String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .filter(|raw_process| {
+            !raw_process.starts_with("PID") && !raw_process.starts_with(&self_pid.to_string())
+        })
+        .map(|raw_process| make_process(raw_process))
+        .collect();
+}
+
+fn is_found(args: Args, process_list: Vec<Process>) -> bool {
     let mut tty_count = 0;
-    for raw_process in String::from_utf8_lossy(&output.stdout).lines() {
-        if raw_process.starts_with("PID") || raw_process.starts_with(&self_pid.to_string()) {
-            continue;
-        }
-        let process = make_process(raw_process);
+
+    for p in process_list {
         let is_continue;
 
-        (is_continue, tty_count) = is_matched(args.clone(), process, tty_count);
+        (is_continue, tty_count) = is_matched(args.clone(), p, tty_count);
         if is_continue {
             return true;
         }
