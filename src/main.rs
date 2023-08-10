@@ -20,11 +20,10 @@ struct Process {
 }
 
 fn main() {
-    let args = Args::parse();
-    if args.command.is_none() && args.pid.is_none() && args.tty.is_none() {
-        println!("arg is not present.");
-        std::process::exit(0);
-    }
+    let args = match make_args() {
+        Some(ref args) => args.clone(),
+        None => std::process::exit(0),
+    };
     let target = make_target(args.clone());
     println!("monitoring {}", target);
     const INTERVAL: u64 = 10;
@@ -64,6 +63,36 @@ fn main() {
         std::process::exit(0);
     }
     println!("{} has been running over an hour.", &target);
+}
+
+fn make_args() -> Option<Args> {
+    let args = Args::parse();
+
+    if args.command.is_some() || args.pid.is_some() || args.tty.is_some() {
+        return Some(args);
+    }
+    println!("args is not present.");
+    println!("command:");
+    let mut command = String::new();
+    std::io::stdin().read_line(&mut command).expect("");
+
+    println!("pid:");
+    let mut pid = String::new();
+    std::io::stdin().read_line(&mut pid).expect("");
+
+    println!("tty:");
+    let mut tty = String::new();
+    std::io::stdin().read_line(&mut tty).expect("");
+
+    if command.trim_end().is_empty() && pid.trim_end().is_empty() && tty.trim_end().is_empty() {
+        return None;
+    } else {
+        return Some(Args {
+            command: Some(command.trim_end().to_owned()),
+            pid: Some(pid.trim_end().to_owned()),
+            tty: Some(tty.trim_end().to_owned()),
+        });
+    }
 }
 
 fn make_target(args: Args) -> String {
