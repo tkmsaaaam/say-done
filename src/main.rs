@@ -21,7 +21,7 @@ struct Process {
 
 fn main() {
     let args = match make_args() {
-        Some(ref args) => args.clone(),
+        Some(args) => args,
         None => std::process::exit(0),
     };
     let target = make_target(args.clone());
@@ -43,7 +43,7 @@ fn main() {
                 "{} is not found. or {} is not started.\nps result:",
                 target, target
             );
-            println!("{}", String::from_utf8_lossy(&output.stdout));
+            println!("{:?}", String::from_utf8(output.stdout));
             std::process::exit(0);
         }
         Command::new("say").arg("Done!").output().expect("failed");
@@ -62,7 +62,7 @@ fn main() {
         }
         std::process::exit(0);
     }
-    println!("{} has been running over an hour.", &target);
+    println!("{} has been running over an hour.", target.clone());
 }
 
 fn make_args() -> Option<Args> {
