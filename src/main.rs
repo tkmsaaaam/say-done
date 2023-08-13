@@ -169,10 +169,10 @@ fn is_found(args: Args, process_list: Vec<Process>) -> bool {
     let mut tty_count = 0;
 
     for p in process_list {
-        let is_continue;
+        let is_found;
 
-        (is_continue, tty_count) = is_matched(args.clone(), p, tty_count);
-        if is_continue {
+        (is_found, tty_count) = is_matched(args.clone(), p, tty_count);
+        if is_found {
             return true;
         }
     }
