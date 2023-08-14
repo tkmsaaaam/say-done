@@ -181,6 +181,7 @@ fn is_found(args: Args, process_list: Vec<Process>) -> bool {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     #[test]
@@ -191,9 +192,9 @@ mod tests {
             tty: None,
         };
         let target_process = Process {
-            pid: "00000".to_owned(),
-            tty: "ttys001".to_owned(),
-            command: "command".to_owned(),
+            pid: String::from("00000"),
+            tty: String::from("ttys001"),
+            command: String::from("command"),
         };
         let mut tty_count = 0;
         let is_continue;
@@ -210,14 +211,46 @@ mod tests {
             tty: None,
         };
         let target_process = Process {
-            pid: "00000".to_owned(),
-            tty: "ttys001".to_owned(),
-            command: "command".to_owned(),
+            pid: String::from("00000"),
+            tty: String::from("ttys001"),
+            command: String::from("command"),
         };
         let mut tty_count = 0;
         let is_continue;
         (is_continue, tty_count) = is_matched(args, target_process, tty_count);
         assert!(!is_continue);
         assert_eq!(0, tty_count);
+    }
+
+    #[test]
+    fn test_is_found_true() {
+        let args = Args {
+            command: Some(String::from("command")),
+            pid: None,
+            tty: None,
+        };
+        let process = Process {
+            pid: String::from("00000"),
+            tty: String::from("ttys001"),
+            command: String::from("command"),
+        };
+        let process_list = Vec::from([process]);
+        assert!(is_found(args, process_list))
+    }
+
+    #[test]
+    fn test_is_found_false() {
+        let args = Args {
+            command: Some(String::from("ps")),
+            pid: None,
+            tty: None,
+        };
+        let process = Process {
+            pid: String::from("00000"),
+            tty: String::from("ttys001"),
+            command: String::from("command"),
+        };
+        let process_list = Vec::from([process]);
+        assert!(!is_found(args, process_list))
     }
 }
