@@ -185,6 +185,15 @@ mod tests {
     use super::*;
 
     #[test]
+    fn make_process_ok() {
+        let process = "00000 ttys000    0:00.00 sleep 30";
+        let res = make_process(process);
+        assert_eq!("00000", res.pid);
+        assert_eq!("ttys000", res.tty);
+        assert_eq!("sleep 30", res.command);
+    }
+
+    #[test]
     fn test_is_matched_true() {
         let args = Args {
             command: Some(String::from("command")),
