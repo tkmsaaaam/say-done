@@ -30,7 +30,7 @@ fn main() {
     const MAX_MONITERING_TIME: u64 = 60 * 60 * 24;
 
     for i in 0..MAX_MONITERING_TIME / INTERVAL {
-        let output = Command::new("ps").output().expect("failed");
+        let output = Command::new("ps").output().expect("ps was failed.");
         let process_list = make_process_list(output.clone());
         let is_continue = is_found(args.clone(), process_list);
         if is_continue {
@@ -46,7 +46,10 @@ fn main() {
             println!("{:?}", String::from_utf8(output.stdout));
             std::process::exit(0);
         }
-        Command::new("say").arg("Done!").output().expect("failed");
+        Command::new("say")
+            .arg("Done!")
+            .output()
+            .expect("say was failed.");
         println!("time: {}s", i * INTERVAL);
         if env::consts::OS == "macos" {
             let arg = String::from("display notification \"")
@@ -58,11 +61,11 @@ fn main() {
                 .arg("-e")
                 .arg(arg)
                 .output()
-                .expect("failed");
+                .expect("osascript was failed.");
         }
         std::process::exit(0);
     }
-    println!("{} has been running over an hour.", target.clone());
+    println!("{} has been running over an hour.", target);
 }
 
 fn make_args() -> Option<Args> {
@@ -88,26 +91,26 @@ fn make_args() -> Option<Args> {
         return None;
     } else {
         return Some(Args {
-            command: Some(command.trim_end().to_owned()),
-            pid: Some(pid.trim_end().to_owned()),
-            tty: Some(tty.trim_end().to_owned()),
+            command: Some(String::from(command.trim_end())),
+            pid: Some(String::from(pid.trim_end())),
+            tty: Some(String::from(tty.trim_end())),
         });
     }
 }
 
 fn make_target(args: Args) -> String {
     if args.command.is_some() {
-        return args.command.clone().unwrap();
+        return args.command.unwrap();
     } else if args.pid.is_some() {
-        return args.pid.clone().unwrap();
+        return args.pid.unwrap();
     } else {
-        return args.tty.clone().unwrap();
+        return args.tty.unwrap();
     }
 }
 
 fn make_process(process: &str) -> Process {
     let process_splited: Vec<&str> = process.split_whitespace().collect();
-    let mut command = String::from(process_splited[3].to_owned());
+    let mut command = String::from(process_splited[3]);
     if process_splited.len() > 4 {
         for i in 4..process_splited.len() {
             command = command + " " + process_splited[i]
@@ -115,8 +118,8 @@ fn make_process(process: &str) -> Process {
     }
 
     return Process {
-        pid: process_splited[0].to_owned(),
-        tty: process_splited[1].to_owned(),
+        pid: String::from(process_splited[0]),
+        tty: String::from(process_splited[1]),
         command,
     };
 }
