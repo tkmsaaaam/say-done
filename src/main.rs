@@ -188,6 +188,38 @@ mod tests {
     use super::*;
 
     #[test]
+    fn make_target_is_tty() {
+        let args = Args {
+            command: None,
+            pid: None,
+            tty: Some(String::from("ttys000")),
+        };
+        let res = make_target(args);
+        assert_eq!("ttys000", res);
+    }
+    #[test]
+    fn make_target_is_pid() {
+        let args = Args {
+            command: None,
+            pid: Some(String::from("00000")),
+            tty: Some(String::from("ttys000")),
+        };
+        let res = make_target(args);
+        assert_eq!("00000", res);
+    }
+
+    #[test]
+    fn make_target_is_command() {
+        let args = Args {
+            command: Some(String::from("command")),
+            pid: Some(String::from("00000")),
+            tty: Some(String::from("ttys000")),
+        };
+        let res = make_target(args);
+        assert_eq!("command", res);
+    }
+
+    #[test]
     fn make_process_ok() {
         let process = "00000 ttys000    0:00.00 sleep 30";
         let res = make_process(process);
