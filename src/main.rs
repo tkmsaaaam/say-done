@@ -110,16 +110,19 @@ fn make_target(args: Args) -> String {
 
 fn make_process(process: &str) -> Process {
     let process_splited: Vec<&str> = process.split_whitespace().collect();
-    let mut command = String::from(process_splited[3]);
-    if process_splited.len() > 4 {
-        for i in 4..process_splited.len() {
+    let pid_index = 0;
+    let tty_index = 1;
+    let command_start_index = 3;
+    let mut command = String::from(process_splited[command_start_index]);
+    if process_splited.len() > (command_start_index + 1) {
+        for i in (command_start_index + 1)..process_splited.len() {
             command = command + " " + process_splited[i]
         }
     }
 
     return Process {
-        pid: String::from(process_splited[0]),
-        tty: String::from(process_splited[1]),
+        pid: String::from(process_splited[pid_index]),
+        tty: String::from(process_splited[tty_index]),
         command,
     };
 }
