@@ -99,13 +99,17 @@ fn make_args() -> Option<Args> {
 }
 
 fn make_target(args: Args) -> String {
+    let mut target = String::new();
     if args.command.is_some() {
-        return args.command.unwrap();
-    } else if args.pid.is_some() {
-        return args.pid.unwrap();
-    } else {
-        return args.tty.unwrap();
+        target = target + "command: " + &args.command.unwrap() + " ";
     }
+    if args.pid.is_some() {
+        target = target + "pid: " + &args.pid.unwrap() + " ";
+    }
+    if args.tty.is_some() {
+        target = target + "tty: " + &args.tty.unwrap() + " ";
+    }
+    return target;
 }
 
 fn make_process(process: &str) -> Process {
@@ -198,7 +202,7 @@ mod tests {
             tty: Some(String::from("ttys000")),
         };
         let res = make_target(args);
-        assert_eq!("ttys000", res);
+        assert_eq!("tty: ttys000 ", res);
     }
     #[test]
     fn make_target_is_pid() {
@@ -208,7 +212,7 @@ mod tests {
             tty: Some(String::from("ttys000")),
         };
         let res = make_target(args);
-        assert_eq!("00000", res);
+        assert_eq!("pid: 00000 tty: ttys000 ", res);
     }
 
     #[test]
@@ -219,7 +223,7 @@ mod tests {
             tty: Some(String::from("ttys000")),
         };
         let res = make_target(args);
-        assert_eq!("command", res);
+        assert_eq!("command: command pid: 00000 tty: ttys000 ", res);
     }
 
     #[test]
