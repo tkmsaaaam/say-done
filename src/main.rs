@@ -100,14 +100,20 @@ fn make_args() -> Option<Args> {
 
 fn make_target(args: Args) -> String {
     let mut target = String::new();
-    if args.command.is_some() {
-        target = target + "command: " + &args.command.unwrap() + " ";
+
+    match args.command {
+        Some(ref command) => target = target + "command: " + command + " ",
+        None => {}
     }
-    if args.pid.is_some() {
-        target = target + "pid: " + &args.pid.unwrap() + " ";
+
+    match args.pid {
+        Some(ref pid) => target = target + "pid: " + pid + " ",
+        None => {}
     }
-    if args.tty.is_some() {
-        target = target + "tty: " + &args.tty.unwrap() + " ";
+
+    match args.tty {
+        Some(ref tty) => target = target + "tty: " + tty + " ",
+        None => {}
     }
     return target;
 }
