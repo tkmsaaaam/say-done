@@ -1,4 +1,5 @@
 use clap::Parser;
+use std::collections::HashMap;
 use std::env::{self};
 use std::process::{Command, Output};
 use std::{thread, time};
@@ -13,9 +14,9 @@ struct Args {
     tty: Option<String>,
 }
 
+#[derive(Clone)]
 struct Process {
     pid: String,
-    tty: String,
     command: String,
 }
 
@@ -31,8 +32,8 @@ fn main() {
 
     for i in 0..MAX_MONITERING_TIME / INTERVAL {
         let output = Command::new("ps").output().expect("ps was failed.");
-        let process_list = make_process_list(output.clone());
-        let is_continue = is_found(args.clone(), process_list);
+        let process_map = make_process_map(output.clone());
+        let is_continue = is_found(args.clone(), process_map);
         if is_continue {
             thread::sleep(time::Duration::from_secs(INTERVAL));
             continue;
@@ -118,7 +119,7 @@ fn make_target(args: Args) -> String {
     return target;
 }
 
-fn make_process(process: &str) -> Process {
+fn make_process(process: &str) -> (String, Process) {
     let process_splited: Vec<&str> = process.split_whitespace().collect();
     let pid_index = 0;
     let tty_index = 1;
@@ -130,18 +131,24 @@ fn make_process(process: &str) -> Process {
         }
     }
 
-    return Process {
-        pid: String::from(process_splited[pid_index]),
-        tty: String::from(process_splited[tty_index]),
-        command,
-    };
+    return (
+        String::from(process_splited[tty_index]),
+        Process {
+            pid: String::from(process_splited[pid_index]),
+            command,
+        },
+    );
 }
 
-fn is_matched(args: Args, target_process: Process, mut tty_count: i32) -> (bool, i32) {
+fn is_matched(args: Args, target_tty: String, target_process_list: Vec<Process>) -> bool {
     match args.pid {
         Some(ref pid) => {
-            if target_process.pid.eq(pid) {
-                return (true, tty_count);
+            let c = target_process_list
+                .iter()
+                .filter(|process| process.pid.eq(pid))
+                .count();
+            if c > 0 {
+                return true;
             }
         }
         None => {}
@@ -149,11 +156,8 @@ fn is_matched(args: Args, target_process: Process, mut tty_count: i32) -> (bool,
 
     match args.tty {
         Some(ref tty) => {
-            if target_process.tty.eq(tty) {
-                tty_count += 1;
-                if tty_count > 1 {
-                    return (true, tty_count);
-                }
+            if target_tty.eq(tty) && target_process_list.len() > 1 {
+                return true;
             }
         }
         None => {}
@@ -161,34 +165,44 @@ fn is_matched(args: Args, target_process: Process, mut tty_count: i32) -> (bool,
 
     match args.command {
         Some(ref command) => {
-            if target_process.command.starts_with(command) {
-                return (true, tty_count);
+            let c = target_process_list
+                .iter()
+                .filter(|process| process.command.starts_with(command))
+                .count();
+            if c > 0 {
+                return true;
             }
         }
         None => {}
     }
-    return (false, tty_count);
+    return false;
 }
 
-fn make_process_list(output: Output) -> Vec<Process> {
+fn make_process_map(output: Output) -> HashMap<String, Vec<Process>> {
     let self_pid = std::process::id();
-    return String::from_utf8_lossy(&output.stdout)
-        .lines()
-        .filter(|raw_process| {
-            !raw_process.starts_with("PID") && !raw_process.starts_with(&self_pid.to_string())
-        })
-        .map(|raw_process| make_process(raw_process))
-        .collect();
+    let mut process_map: HashMap<String, Vec<Process>> = HashMap::new();
+    for line in String::from_utf8_lossy(&output.stdout).lines() {
+        if line.starts_with("  PID") || line.starts_with(&self_pid.to_string()) {
+            continue;
+        }
+        let tty: String;
+        let process: Process;
+        (tty, process) = make_process(line);
+        if process_map.contains_key(&tty) {
+            let mut list = process_map.get(&tty).unwrap().to_vec();
+            list.push(process);
+            process_map.insert(tty, list);
+        } else {
+            process_map.insert(tty, Vec::from([process]));
+        }
+    }
+
+    return process_map;
 }
 
-fn is_found(args: Args, process_list: Vec<Process>) -> bool {
-    let mut tty_count = 0;
-
-    for p in process_list {
-        let is_found;
-
-        (is_found, tty_count) = is_matched(args.clone(), p, tty_count);
-        if is_found {
+fn is_found(args: Args, process_map: HashMap<String, Vec<Process>>) -> bool {
+    for (tty, process_list) in process_map {
+        if is_matched(args.clone(), tty, process_list) {
             return true;
         }
     }
@@ -236,9 +250,9 @@ mod tests {
     fn make_process_ok() {
         let process = "00000 ttys000    0:00.00 sleep 30";
         let res = make_process(process);
-        assert_eq!("00000", res.pid);
-        assert_eq!("ttys000", res.tty);
-        assert_eq!("sleep 30", res.command);
+        assert_eq!("00000", res.1.pid);
+        assert_eq!("ttys000", res.0);
+        assert_eq!("sleep 30", res.1.command);
     }
 
     #[test]
@@ -250,14 +264,10 @@ mod tests {
         };
         let target_process = Process {
             pid: String::from("00000"),
-            tty: String::from("ttys001"),
             command: String::from("command"),
         };
-        let mut tty_count = 0;
-        let is_continue;
-        (is_continue, tty_count) = is_matched(args, target_process, tty_count);
+        let is_continue = is_matched(args, String::from("ttys001"), Vec::from([target_process]));
         assert!(is_continue);
-        assert_eq!(0, tty_count);
     }
 
     #[test]
@@ -269,14 +279,10 @@ mod tests {
         };
         let target_process = Process {
             pid: String::from("00000"),
-            tty: String::from("ttys001"),
             command: String::from("command"),
         };
-        let mut tty_count = 0;
-        let is_continue;
-        (is_continue, tty_count) = is_matched(args, target_process, tty_count);
+        let is_continue = is_matched(args, String::from("ttys001"), Vec::from([target_process]));
         assert!(!is_continue);
-        assert_eq!(0, tty_count);
     }
 
     #[test]
@@ -288,11 +294,13 @@ mod tests {
         };
         let process = Process {
             pid: String::from("00000"),
-            tty: String::from("ttys001"),
             command: String::from("command"),
         };
+        let tty = String::from("ttys001");
         let process_list = Vec::from([process]);
-        assert!(is_found(args, process_list))
+        let mut process_map = HashMap::new();
+        process_map.insert(tty, process_list);
+        assert!(is_found(args, process_map))
     }
 
     #[test]
@@ -304,10 +312,12 @@ mod tests {
         };
         let process = Process {
             pid: String::from("00000"),
-            tty: String::from("ttys001"),
             command: String::from("command"),
         };
+        let tty = String::from("ttys001");
         let process_list = Vec::from([process]);
-        assert!(!is_found(args, process_list))
+        let mut process_map = HashMap::new();
+        process_map.insert(tty, process_list);
+        assert!(!is_found(args, process_map))
     }
 }
