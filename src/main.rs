@@ -188,12 +188,16 @@ fn make_process_map(output: Output) -> HashMap<String, Vec<Process>> {
         let tty: String;
         let process: Process;
         (tty, process) = make_process(line);
-        if process_map.contains_key(&tty) {
-            let mut list = process_map.get(&tty).unwrap().to_vec();
-            list.push(process);
-            process_map.insert(tty, list);
-        } else {
-            process_map.insert(tty, Vec::from([process]));
+
+        match process_map.get(&tty) {
+            Some(process_list) => {
+                let mut new_process_list = process_list.to_vec();
+                new_process_list.push(process);
+                process_map.insert(tty, new_process_list);
+            }
+            None => {
+                process_map.insert(tty, Vec::from([process]));
+            }
         }
     }
 
