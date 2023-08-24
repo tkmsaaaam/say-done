@@ -2,6 +2,7 @@ use clap::Parser;
 use std::collections::HashMap;
 use std::env::{self};
 use std::process::{Command, Output};
+use std::{thread, time};
 
 #[derive(Debug, Parser, Clone)]
 struct Args {
@@ -33,7 +34,11 @@ fn main() {
         let output = Command::new("ps").output().expect("ps was failed.");
         let process_map = make_process_map(output.clone());
         let is_continue = is_found(args.clone(), process_map);
-        if !is_continue && i == 0 {
+        if is_continue {
+            thread::sleep(time::Duration::from_secs(INTERVAL));
+            continue;
+        }
+        if i == 0 {
             println!(
                 "{} is not found. or {} is not started.\nps result:",
                 target, target
