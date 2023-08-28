@@ -4,7 +4,7 @@ use std::env::{self};
 use std::process::{Command, Output};
 use std::{thread, time};
 
-#[derive(Debug, Parser, Clone)]
+#[derive(Parser, Clone)]
 struct Args {
     #[arg(short = 'c', long = "command")]
     command: Option<String>,
@@ -20,6 +20,8 @@ struct Process {
     command: String,
 }
 
+const PS_COMMAND_FAILD_MESSAGE: &str = "ps was failed.";
+
 fn main() {
     let args = match make_args() {
         Some(args) => args,
@@ -31,7 +33,7 @@ fn main() {
     const MAX_MONITERING_TIME: u64 = 60 * 60 * 24;
 
     for i in 0..MAX_MONITERING_TIME / INTERVAL {
-        let output = Command::new("ps").output().expect("ps was failed.");
+        let output = Command::new("ps").output().expect(PS_COMMAND_FAILD_MESSAGE);
         let process_map = make_process_map(output.clone());
         let is_continue = is_found(args.clone(), process_map);
         if is_continue {
@@ -50,7 +52,7 @@ fn main() {
             .arg("Done!")
             .output()
             .expect("say was failed.");
-        println!("time: {}s", i * INTERVAL);
+        println!("({}) was finished. time: {}s", target, i * INTERVAL);
         if env::consts::OS == "macos" {
             let arg = String::from("display notification \"")
                 + &target
@@ -183,7 +185,7 @@ fn make_process_map(output: Output) -> HashMap<String, Vec<Process>> {
     for line in String::from_utf8_lossy(&output.stdout).lines() {
         if line.starts_with("  PID")
             || line.starts_with(&self_pid.to_string())
-            || line.starts_with("pid was failed.")
+            || line.starts_with(PS_COMMAND_FAILD_MESSAGE)
         {
             continue;
         }
@@ -221,7 +223,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn make_target_is_tty() {
+    fn test_make_target_is_tty() {
         let args = Args {
             command: None,
             pid: None,
@@ -231,7 +233,7 @@ mod tests {
         assert_eq!("tty: ttys000 ", res);
     }
     #[test]
-    fn make_target_is_pid() {
+    fn test_make_target_is_pid() {
         let args = Args {
             command: None,
             pid: Some(String::from("00000")),
@@ -242,7 +244,7 @@ mod tests {
     }
 
     #[test]
-    fn make_target_is_command() {
+    fn test_make_target_is_command() {
         let args = Args {
             command: Some(String::from("command")),
             pid: Some(String::from("00000")),
@@ -253,7 +255,7 @@ mod tests {
     }
 
     #[test]
-    fn make_process_ok() {
+    fn test_make_process_ok() {
         let process = "00000 ttys000    0:00.00 sleep 30";
         let res = make_process(process);
         assert_eq!("00000", res.1.pid);
