@@ -28,7 +28,7 @@ fn main() {
         None => std::process::exit(0),
     };
     let target = make_target(args.clone());
-    println!("monitoring {}", target);
+    println!("monitoring ({})", target);
     const INTERVAL: u64 = 10;
     const MAX_MONITERING_TIME: u64 = 60 * 60 * 24;
 
@@ -42,7 +42,7 @@ fn main() {
         }
         if i == 0 {
             println!(
-                "{} is not found. or {} is not started.\nps result:",
+                "({}) is not found. or ({}) is not started.\nps result:",
                 target, target
             );
             println!("{:?}", String::from_utf8(output.stdout));
@@ -67,7 +67,7 @@ fn main() {
         }
         std::process::exit(0);
     }
-    println!("{} has been running over an hour.", target);
+    println!("({}) has been running over an hour.", target);
 }
 
 fn make_args() -> Option<Args> {
@@ -192,17 +192,7 @@ fn make_process_map(output: Output) -> HashMap<String, Vec<Process>> {
         let tty: String;
         let process: Process;
         (tty, process) = make_process(line);
-
-        match process_map.get(&tty) {
-            Some(process_list) => {
-                let mut new_process_list = process_list.to_vec();
-                new_process_list.push(process);
-                process_map.insert(tty, new_process_list);
-            }
-            None => {
-                process_map.insert(tty, Vec::from([process]));
-            }
-        }
+        process_map.entry(tty).or_insert(Vec::new()).push(process);
     }
 
     return process_map;
