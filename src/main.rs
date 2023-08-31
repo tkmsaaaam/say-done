@@ -20,6 +20,7 @@ struct Process {
     command: String,
 }
 
+const INTERVAL: u64 = 10;
 const PS_COMMAND_FAILD_MESSAGE: &str = "ps was failed.";
 
 fn main() {
@@ -29,7 +30,6 @@ fn main() {
     };
     let target = make_target(args.clone());
     println!("monitoring ({})", target);
-    const INTERVAL: u64 = 10;
     const MAX_MONITERING_TIME: u64 = 60 * 60 * 24;
 
     for i in 0..MAX_MONITERING_TIME / INTERVAL {
@@ -41,30 +41,10 @@ fn main() {
             continue;
         }
         if i == 0 {
-            println!(
-                "({}) is not found. or ({}) is not started.\nps result:",
-                target, target
-            );
-            println!("{:?}", String::from_utf8(output.stdout));
+            print_target_not_found(target, output);
             std::process::exit(0);
         }
-        Command::new("say")
-            .arg("Done!")
-            .output()
-            .expect("say was failed.");
-        println!("({}) was finished. time: {}s", target, i * INTERVAL);
-        if env::consts::OS == "macos" {
-            let arg = String::from("display notification \"")
-                + &target
-                + " was ended.\" with title \""
-                + env!("CARGO_PKG_NAME")
-                + "\""; // display notification "CMD was ended." with title "CMD"
-            Command::new("osascript")
-                .arg("-e")
-                .arg(arg)
-                .output()
-                .expect("osascript was failed.");
-        }
+        notify_terminate(target, i);
         std::process::exit(0);
     }
     println!("({}) has been running over an hour.", target);
@@ -205,6 +185,34 @@ fn is_found(args: Args, process_map: HashMap<String, Vec<Process>>) -> bool {
         }
     }
     return false;
+}
+
+fn print_target_not_found(target: String, output: Output) {
+    println!(
+        "({}) is not found. or ({}) is not started.\nps result:",
+        target, target
+    );
+    println!("{:?}", String::from_utf8(output.stdout));
+}
+
+fn notify_terminate(target: String, i: u64) {
+    Command::new("say")
+        .arg("Done!")
+        .output()
+        .expect("say was failed.");
+    println!("({}) was finished. time: {}s", target, i * INTERVAL);
+    if env::consts::OS == "macos" {
+        let arg = String::from("display notification \"")
+            + &target
+            + " was ended.\" with title \""
+            + env!("CARGO_PKG_NAME")
+            + "\""; // display notification "CMD was ended." with title "CMD"
+        Command::new("osascript")
+            .arg("-e")
+            .arg(arg)
+            .output()
+            .expect("osascript was failed.");
+    }
 }
 
 #[cfg(test)]
