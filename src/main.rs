@@ -14,7 +14,6 @@ struct Args {
     tty: Option<String>,
 }
 
-#[derive(Clone)]
 struct Process {
     pid: String,
     command: String,
