@@ -56,6 +56,16 @@ fn make_args() -> Option<Args> {
         return Some(args);
     }
     println!("args is not present.");
+    println!(
+        "Process: \n{}",
+        String::from_utf8_lossy(
+            &Command::new("ps")
+                .output()
+                .expect(PS_COMMAND_FAILD_MESSAGE)
+                .stdout
+        )
+    );
+
     println!("command:");
     let mut command = String::new();
     std::io::stdin().read_line(&mut command).expect("");
