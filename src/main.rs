@@ -37,6 +37,9 @@ fn main() {
         let is_continue = is_found(args.clone(), process_map);
         if is_continue {
             thread::sleep(time::Duration::from_secs(INTERVAL));
+            if i % 6 == 0 {
+                println!("{} minutes", i / 6);
+            }
             continue;
         }
         if i == 0 {
