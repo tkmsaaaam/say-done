@@ -12,6 +12,8 @@ struct Args {
     pid: Option<String>,
     #[arg(short = 't', long = "tty")]
     tty: Option<String>,
+    #[arg(short = 'o', long = "output")]
+    output: Option<String>,
 }
 
 struct Process {
@@ -21,6 +23,7 @@ struct Process {
 
 const INTERVAL: u64 = 10;
 const PS_COMMAND_FAILD_MESSAGE: &str = "ps was failed.";
+const DEFAULT_OUTPUT: bool = true;
 
 fn main() {
     let args = match make_args() {
@@ -28,6 +31,7 @@ fn main() {
         None => std::process::exit(0),
     };
     let target = make_target(args.clone());
+    let is_output = make_is_output(args.clone());
     println!("monitoring ({})", target);
     const MAX_MONITERING_TIME: u64 = 60 * 60 * 24;
 
@@ -38,7 +42,9 @@ fn main() {
         if is_continue {
             thread::sleep(time::Duration::from_secs(INTERVAL));
             if i % 6 == 0 {
-                println!("{} minutes", i / 6);
+                if is_output {
+                    println!("{} minutes", i / 6);
+                }
             }
             continue;
         }
@@ -88,6 +94,7 @@ fn make_args() -> Option<Args> {
             command: Some(String::from(command.trim_end())),
             pid: Some(String::from(pid.trim_end())),
             tty: Some(String::from(tty.trim_end())),
+            output: None,
         });
     }
 }
@@ -110,6 +117,19 @@ fn make_target(args: Args) -> String {
         None => {}
     }
     return target;
+}
+
+fn make_is_output(args: Args) -> bool {
+    match args.output {
+        Some(o) => {
+            if o == "false" {
+                return !DEFAULT_OUTPUT;
+            } else {
+                return DEFAULT_OUTPUT;
+            }
+        }
+        None => return DEFAULT_OUTPUT,
+    }
 }
 
 fn make_process(process: &str) -> (String, Process) {
@@ -238,6 +258,7 @@ mod tests {
             command: None,
             pid: None,
             tty: Some(String::from("ttys000")),
+            output: None,
         };
         let res = make_target(args);
         assert_eq!("tty: ttys000 ", res);
@@ -248,6 +269,7 @@ mod tests {
             command: None,
             pid: Some(String::from("00000")),
             tty: Some(String::from("ttys000")),
+            output: None,
         };
         let res = make_target(args);
         assert_eq!("pid: 00000 tty: ttys000 ", res);
@@ -259,6 +281,7 @@ mod tests {
             command: Some(String::from("command")),
             pid: Some(String::from("00000")),
             tty: Some(String::from("ttys000")),
+            output: None,
         };
         let res = make_target(args);
         assert_eq!("command: command pid: 00000 tty: ttys000 ", res);
@@ -279,6 +302,7 @@ mod tests {
             command: Some(String::from("command")),
             pid: None,
             tty: None,
+            output: None,
         };
         let target_process = Process {
             pid: String::from("00000"),
@@ -294,6 +318,7 @@ mod tests {
             command: Some(String::from("ps")),
             pid: None,
             tty: None,
+            output: None,
         };
         let target_process = Process {
             pid: String::from("00000"),
@@ -309,6 +334,7 @@ mod tests {
             command: Some(String::from("command")),
             pid: None,
             tty: None,
+            output: None,
         };
         let process = Process {
             pid: String::from("00000"),
@@ -327,6 +353,7 @@ mod tests {
             command: Some(String::from("ps")),
             pid: None,
             tty: None,
+            output: None,
         };
         let process = Process {
             pid: String::from("00000"),
