@@ -288,6 +288,39 @@ mod tests {
     }
 
     #[test]
+    fn test_make_is_output_none() {
+        let args = Args {
+            command: None,
+            pid: None,
+            tty: None,
+            output: None,
+        };
+        assert!(make_is_output(args))
+    }
+
+    #[test]
+    fn test_make_is_output_true() {
+        let args = Args {
+            command: None,
+            pid: None,
+            tty: None,
+            output: Some(String::from("true")),
+        };
+        assert!(make_is_output(args))
+    }
+
+    #[test]
+    fn test_make_is_output_false() {
+        let args = Args {
+            command: None,
+            pid: None,
+            tty: None,
+            output: Some(String::from("false")),
+        };
+        assert!(!make_is_output(args))
+    }
+
+    #[test]
     fn test_make_process_ok() {
         let process = "00000 ttys000    0:00.00 sleep 30";
         let res = make_process(process);
