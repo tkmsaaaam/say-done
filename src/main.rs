@@ -13,7 +13,7 @@ struct Args {
     #[arg(short = 't', long = "tty")]
     tty: Option<String>,
     #[arg(short = 'o', long = "output")]
-    output: Option<String>,
+    output: Option<bool>,
 }
 
 struct Process {
@@ -122,7 +122,7 @@ fn make_target(args: Args) -> String {
 fn make_is_output(args: Args) -> bool {
     match args.output {
         Some(o) => {
-            if o == "false" {
+            if o == false {
                 return !DEFAULT_OUTPUT;
             } else {
                 return DEFAULT_OUTPUT;
@@ -304,7 +304,7 @@ mod tests {
             command: None,
             pid: None,
             tty: None,
-            output: Some(String::from("true")),
+            output: Some(true),
         };
         assert!(make_is_output(args))
     }
@@ -315,7 +315,7 @@ mod tests {
             command: None,
             pid: None,
             tty: None,
-            output: Some(String::from("false")),
+            output: Some(false),
         };
         assert!(!make_is_output(args))
     }
