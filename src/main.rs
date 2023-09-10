@@ -4,7 +4,7 @@ use std::env::{self};
 use std::process::{Command, Output};
 use std::{thread, time};
 
-#[derive(Parser, Clone)]
+#[derive(Parser)]
 struct Args {
     #[arg(short = 'c', long = "command")]
     command: Option<String>,
@@ -14,6 +14,13 @@ struct Args {
     tty: Option<String>,
     #[arg(short = 'o', long = "output")]
     output: Option<bool>,
+}
+
+#[derive(Clone)]
+struct Query {
+    command: Option<String>,
+    pid: Option<String>,
+    tty: Option<String>,
 }
 
 struct Process {
@@ -26,19 +33,19 @@ const PS_COMMAND_FAILD_MESSAGE: &str = "ps was failed.";
 const DEFAULT_OUTPUT: bool = true;
 
 fn main() {
-    let args = match make_args() {
-        Some(args) => args,
+    let query = match make_args() {
+        Some(q) => q,
         None => std::process::exit(0),
     };
-    let target = make_target(args.clone());
-    let is_output = make_is_output(args.clone());
-    println!("monitoring ({})", target);
+    let query_str = make_query_str(query.clone());
+    let is_output = make_is_output(Args::parse());
+    println!("monitoring ({})", query_str);
     const MAX_MONITERING_TIME: u64 = 60 * 60 * 24;
 
     for i in 0..MAX_MONITERING_TIME / INTERVAL {
         let output = Command::new("ps").output().expect(PS_COMMAND_FAILD_MESSAGE);
         let process_map = make_process_map(output.clone());
-        let is_continue = is_found(args.clone(), process_map);
+        let is_continue = is_found(query.clone(), process_map);
         if is_continue {
             thread::sleep(time::Duration::from_secs(INTERVAL));
             if i % 6 == 0 {
@@ -49,20 +56,25 @@ fn main() {
             continue;
         }
         if i == 0 {
-            print_target_not_found(target, output);
+            print_target_not_found(query_str, output);
             std::process::exit(0);
         }
-        notify_terminate(target, i);
+        notify_terminate(query_str, i);
         std::process::exit(0);
     }
-    println!("({}) has been running over an hour.", target);
+    println!("({}) has been running over an hour.", query_str);
 }
 
-fn make_args() -> Option<Args> {
+fn make_args() -> Option<Query> {
     let args = Args::parse();
 
     if args.command.is_some() || args.pid.is_some() || args.tty.is_some() {
-        return Some(args);
+        let query = Query {
+            command: args.command,
+            pid: args.pid,
+            tty: args.tty,
+        };
+        return Some(query);
     }
     println!("args is not present.");
     println!(
@@ -90,33 +102,32 @@ fn make_args() -> Option<Args> {
     if command.trim_end().is_empty() && pid.trim_end().is_empty() && tty.trim_end().is_empty() {
         return None;
     } else {
-        return Some(Args {
+        return Some(Query {
             command: Some(String::from(command.trim_end())),
             pid: Some(String::from(pid.trim_end())),
             tty: Some(String::from(tty.trim_end())),
-            output: None,
         });
     }
 }
 
-fn make_target(args: Args) -> String {
-    let mut target = String::new();
+fn make_query_str(query: Query) -> String {
+    let mut name = String::new();
 
-    match args.command {
-        Some(ref command) => target = target + "command: " + command + " ",
+    match query.command {
+        Some(ref command) => name = name + "command: " + command + " ",
         None => {}
     }
 
-    match args.pid {
-        Some(ref pid) => target = target + "pid: " + pid + " ",
+    match query.pid {
+        Some(ref pid) => name = name + "pid: " + pid + " ",
         None => {}
     }
 
-    match args.tty {
-        Some(ref tty) => target = target + "tty: " + tty + " ",
+    match query.tty {
+        Some(ref tty) => name = name + "tty: " + tty + " ",
         None => {}
     }
-    return target;
+    return name;
 }
 
 fn make_is_output(args: Args) -> bool {
@@ -153,8 +164,8 @@ fn make_process(process: &str) -> (String, Process) {
     );
 }
 
-fn is_matched(args: Args, target_tty: String, target_process_list: Vec<Process>) -> bool {
-    match args.pid {
+fn is_matched(query: Query, target_tty: String, target_process_list: Vec<Process>) -> bool {
+    match query.pid {
         Some(ref pid) => {
             let c = target_process_list
                 .iter()
@@ -167,7 +178,7 @@ fn is_matched(args: Args, target_tty: String, target_process_list: Vec<Process>)
         None => {}
     }
 
-    match args.tty {
+    match query.tty {
         Some(ref tty) => {
             if target_tty.eq(tty) && target_process_list.len() > 1 {
                 return true;
@@ -176,7 +187,7 @@ fn is_matched(args: Args, target_tty: String, target_process_list: Vec<Process>)
         None => {}
     }
 
-    match args.command {
+    match query.command {
         Some(ref command) => {
             let c = target_process_list
                 .iter()
@@ -210,9 +221,9 @@ fn make_process_map(output: Output) -> HashMap<String, Vec<Process>> {
     return process_map;
 }
 
-fn is_found(args: Args, process_map: HashMap<String, Vec<Process>>) -> bool {
+fn is_found(query: Query, process_map: HashMap<String, Vec<Process>>) -> bool {
     for (tty, process_list) in process_map {
-        if is_matched(args.clone(), tty, process_list) {
+        if is_matched(query.clone(), tty, process_list) {
             return true;
         }
     }
@@ -253,42 +264,39 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_target_is_tty() {
-        let args = Args {
+    fn make_query_str_from_tty() {
+        let query = Query {
             command: None,
             pid: None,
             tty: Some(String::from("ttys000")),
-            output: None,
         };
-        let res = make_target(args);
+        let res = make_query_str(query);
         assert_eq!("tty: ttys000 ", res);
     }
     #[test]
-    fn test_make_target_is_pid() {
-        let args = Args {
+    fn make_query_str_from_pid() {
+        let query = Query {
             command: None,
             pid: Some(String::from("00000")),
             tty: Some(String::from("ttys000")),
-            output: None,
         };
-        let res = make_target(args);
+        let res = make_query_str(query);
         assert_eq!("pid: 00000 tty: ttys000 ", res);
     }
 
     #[test]
-    fn test_make_target_is_command() {
-        let args = Args {
+    fn make_query_str_from_command() {
+        let query = Query {
             command: Some(String::from("command")),
             pid: Some(String::from("00000")),
             tty: Some(String::from("ttys000")),
-            output: None,
         };
-        let res = make_target(args);
+        let res = make_query_str(query);
         assert_eq!("command: command pid: 00000 tty: ttys000 ", res);
     }
 
     #[test]
-    fn test_make_is_output_none() {
+    fn make_is_output_none() {
         let args = Args {
             command: None,
             pid: None,
@@ -299,7 +307,7 @@ mod tests {
     }
 
     #[test]
-    fn test_make_is_output_true() {
+    fn make_is_output_true() {
         let args = Args {
             command: None,
             pid: None,
@@ -310,7 +318,7 @@ mod tests {
     }
 
     #[test]
-    fn test_make_is_output_false() {
+    fn make_is_output_false() {
         let args = Args {
             command: None,
             pid: None,
@@ -321,7 +329,7 @@ mod tests {
     }
 
     #[test]
-    fn test_make_process_ok() {
+    fn make_process_ok() {
         let process = "00000 ttys000    0:00.00 sleep 30";
         let res = make_process(process);
         assert_eq!("00000", res.1.pid);
@@ -330,12 +338,11 @@ mod tests {
     }
 
     #[test]
-    fn test_is_matched_true() {
-        let args = Args {
+    fn is_matched_true() {
+        let args = Query {
             command: Some(String::from("command")),
             pid: None,
             tty: None,
-            output: None,
         };
         let target_process = Process {
             pid: String::from("00000"),
@@ -346,28 +353,26 @@ mod tests {
     }
 
     #[test]
-    fn test_is_matched_false() {
-        let args = Args {
+    fn is_matched_false() {
+        let query = Query {
             command: Some(String::from("ps")),
             pid: None,
             tty: None,
-            output: None,
         };
         let target_process = Process {
             pid: String::from("00000"),
             command: String::from("command"),
         };
-        let is_continue = is_matched(args, String::from("ttys001"), Vec::from([target_process]));
+        let is_continue = is_matched(query, String::from("ttys001"), Vec::from([target_process]));
         assert!(!is_continue);
     }
 
     #[test]
-    fn test_is_found_true() {
-        let args = Args {
+    fn is_found_true() {
+        let query = Query {
             command: Some(String::from("command")),
             pid: None,
             tty: None,
-            output: None,
         };
         let process = Process {
             pid: String::from("00000"),
@@ -377,16 +382,15 @@ mod tests {
         let process_list = Vec::from([process]);
         let mut process_map = HashMap::new();
         process_map.insert(tty, process_list);
-        assert!(is_found(args, process_map))
+        assert!(is_found(query, process_map))
     }
 
     #[test]
-    fn test_is_found_false() {
-        let args = Args {
+    fn is_found_false() {
+        let query = Query {
             command: Some(String::from("ps")),
             pid: None,
             tty: None,
-            output: None,
         };
         let process = Process {
             pid: String::from("00000"),
@@ -396,6 +400,6 @@ mod tests {
         let process_list = Vec::from([process]);
         let mut process_map = HashMap::new();
         process_map.insert(tty, process_list);
-        assert!(!is_found(args, process_map))
+        assert!(!is_found(query, process_map))
     }
 }
