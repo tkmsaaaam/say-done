@@ -23,6 +23,16 @@ struct Query {
     tty: Option<String>,
 }
 
+impl Args {
+    fn make_query(self) -> Query {
+        return Query {
+            command: self.command,
+            pid: self.pid,
+            tty: self.tty,
+        };
+    }
+}
+
 struct Process {
     pid: String,
     command: String,
@@ -33,7 +43,7 @@ const PS_COMMAND_FAILD_MESSAGE: &str = "ps was failed.";
 const DEFAULT_OUTPUT: bool = true;
 
 fn main() {
-    let query = match make_args() {
+    let query = match make_query() {
         Some(q) => q,
         None => std::process::exit(0),
     };
@@ -65,15 +75,11 @@ fn main() {
     println!("({}) has been running over an hour.", query_str);
 }
 
-fn make_args() -> Option<Query> {
+fn make_query() -> Option<Query> {
     let args = Args::parse();
 
     if args.command.is_some() || args.pid.is_some() || args.tty.is_some() {
-        let query = Query {
-            command: args.command,
-            pid: args.pid,
-            tty: args.tty,
-        };
+        let query = args.make_query();
         return Some(query);
     }
     println!("args is not present.");
