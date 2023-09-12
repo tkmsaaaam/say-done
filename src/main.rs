@@ -4,7 +4,7 @@ use std::env::{self};
 use std::process::{Command, Output};
 use std::{thread, time};
 
-#[derive(Parser)]
+#[derive(Parser, Clone)]
 struct Args {
     #[arg(short = 'c', long = "command")]
     command: Option<String>,
@@ -31,6 +31,32 @@ impl Args {
             tty: self.tty,
         };
     }
+
+    fn is_some(self) -> bool{
+      return  self.command.is_some() || self.pid.is_some() || self.tty.is_some();
+    }
+}
+
+impl Query {
+  fn make_str(self) -> String {
+    let mut name = String::new();
+
+    match self.command {
+        Some(ref command) => name = name + "command: " + command + " ",
+        None => {}
+    }
+
+    match self.pid {
+        Some(ref pid) => name = name + "pid: " + pid + " ",
+        None => {}
+    }
+
+    match self.tty {
+        Some(ref tty) => name = name + "tty: " + tty + " ",
+        None => {}
+    }
+    return name;
+  }
 }
 
 struct Process {
@@ -47,7 +73,7 @@ fn main() {
         Some(q) => q,
         None => std::process::exit(0),
     };
-    let query_str = make_query_str(query.clone());
+    let query_str = query.clone().make_str();
     let is_output = make_is_output(Args::parse());
     println!("monitoring ({})", query_str);
     const MAX_MONITERING_TIME: u64 = 60 * 60 * 24;
@@ -78,7 +104,7 @@ fn main() {
 fn make_query() -> Option<Query> {
     let args = Args::parse();
 
-    if args.command.is_some() || args.pid.is_some() || args.tty.is_some() {
+    if args.clone().is_some() {
         let query = args.make_query();
         return Some(query);
     }
@@ -114,26 +140,6 @@ fn make_query() -> Option<Query> {
             tty: Some(String::from(tty.trim_end())),
         });
     }
-}
-
-fn make_query_str(query: Query) -> String {
-    let mut name = String::new();
-
-    match query.command {
-        Some(ref command) => name = name + "command: " + command + " ",
-        None => {}
-    }
-
-    match query.pid {
-        Some(ref pid) => name = name + "pid: " + pid + " ",
-        None => {}
-    }
-
-    match query.tty {
-        Some(ref tty) => name = name + "tty: " + tty + " ",
-        None => {}
-    }
-    return name;
 }
 
 fn make_is_output(args: Args) -> bool {
@@ -290,7 +296,7 @@ mod tests {
             pid: None,
             tty: Some(String::from("ttys000")),
         };
-        let res = make_query_str(query);
+        let res = query.make_str();
         assert_eq!("tty: ttys000 ", res);
     }
     #[test]
@@ -300,7 +306,7 @@ mod tests {
             pid: Some(String::from("00000")),
             tty: Some(String::from("ttys000")),
         };
-        let res = make_query_str(query);
+        let res = query.make_str();
         assert_eq!("pid: 00000 tty: ttys000 ", res);
     }
 
@@ -311,7 +317,7 @@ mod tests {
             pid: Some(String::from("00000")),
             tty: Some(String::from("ttys000")),
         };
-        let res = make_query_str(query);
+        let res = query.make_str();
         assert_eq!("command: command pid: 00000 tty: ttys000 ", res);
     }
 
