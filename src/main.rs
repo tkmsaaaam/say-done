@@ -270,6 +270,20 @@ mod tests {
     use super::*;
 
     #[test]
+    fn make_query() {
+      let args = Args {
+        command: Some(String::from("command")),
+        pid: Some(String::from("pid")),
+        tty: Some(String::from("tty")),
+        output: None,
+      };
+      let query = args.make_query();
+      assert_eq!("command", query.command.unwrap());
+      assert_eq!("pid", query.pid.unwrap());
+      assert_eq!("tty", query.tty.unwrap());
+    }
+
+    #[test]
     fn make_query_str_from_tty() {
         let query = Query {
             command: None,
