@@ -32,31 +32,31 @@ impl Args {
         };
     }
 
-    fn is_some(self) -> bool{
-      return  self.command.is_some() || self.pid.is_some() || self.tty.is_some();
+    fn is_some(self) -> bool {
+        return self.command.is_some() || self.pid.is_some() || self.tty.is_some();
     }
 }
 
 impl Query {
-  fn make_str(self) -> String {
-    let mut name = String::new();
+    fn make_str(self) -> String {
+        let mut name = String::new();
 
-    match self.command {
-        Some(ref command) => name = name + "command: " + command + " ",
-        None => {}
-    }
+        match self.command {
+            Some(ref command) => name = name + "command: " + command + " ",
+            None => {}
+        }
 
-    match self.pid {
-        Some(ref pid) => name = name + "pid: " + pid + " ",
-        None => {}
-    }
+        match self.pid {
+            Some(ref pid) => name = name + "pid: " + pid + " ",
+            None => {}
+        }
 
-    match self.tty {
-        Some(ref tty) => name = name + "tty: " + tty + " ",
-        None => {}
+        match self.tty {
+            Some(ref tty) => name = name + "tty: " + tty + " ",
+            None => {}
+        }
+        return name;
     }
-    return name;
-  }
 }
 
 struct Process {
@@ -277,16 +277,16 @@ mod tests {
 
     #[test]
     fn make_query() {
-      let args = Args {
-        command: Some(String::from("command")),
-        pid: Some(String::from("pid")),
-        tty: Some(String::from("tty")),
-        output: None,
-      };
-      let query = args.make_query();
-      assert_eq!("command", query.command.unwrap());
-      assert_eq!("pid", query.pid.unwrap());
-      assert_eq!("tty", query.tty.unwrap());
+        let args = Args {
+            command: Some(String::from("command")),
+            pid: Some(String::from("pid")),
+            tty: Some(String::from("tty")),
+            output: None,
+        };
+        let query = args.make_query();
+        assert_eq!("command", query.command.unwrap());
+        assert_eq!("pid", query.pid.unwrap());
+        assert_eq!("tty", query.tty.unwrap());
     }
 
     #[test]
