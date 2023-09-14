@@ -35,6 +35,19 @@ impl Args {
     fn is_some(self) -> bool {
         return self.command.is_some() || self.pid.is_some() || self.tty.is_some();
     }
+
+    fn is_output(self) -> bool {
+        match self.output {
+            Some(o) => {
+                if o == false {
+                    return !DEFAULT_OUTPUT;
+                } else {
+                    return DEFAULT_OUTPUT;
+                }
+            }
+            None => return DEFAULT_OUTPUT,
+        }
+    }
 }
 
 impl Query {
@@ -74,7 +87,7 @@ fn main() {
         None => std::process::exit(0),
     };
     let query_str = query.clone().make_str();
-    let is_output = make_is_output(Args::parse());
+    let is_output = Args::parse().is_output();
     println!("monitoring ({})", query_str);
     const MAX_MONITERING_TIME: u64 = 60 * 60 * 24;
 
@@ -139,19 +152,6 @@ fn make_query() -> Option<Query> {
             pid: Some(String::from(pid.trim_end())),
             tty: Some(String::from(tty.trim_end())),
         });
-    }
-}
-
-fn make_is_output(args: Args) -> bool {
-    match args.output {
-        Some(o) => {
-            if o == false {
-                return !DEFAULT_OUTPUT;
-            } else {
-                return DEFAULT_OUTPUT;
-            }
-        }
-        None => return DEFAULT_OUTPUT,
     }
 }
 
@@ -329,7 +329,7 @@ mod tests {
             tty: None,
             output: None,
         };
-        assert!(make_is_output(args))
+        assert!(args.is_output())
     }
 
     #[test]
@@ -340,7 +340,7 @@ mod tests {
             tty: None,
             output: Some(true),
         };
-        assert!(make_is_output(args))
+        assert!(args.is_output())
     }
 
     #[test]
@@ -351,7 +351,7 @@ mod tests {
             tty: None,
             output: Some(false),
         };
-        assert!(!make_is_output(args))
+        assert!(!args.is_output())
     }
 
     #[test]
