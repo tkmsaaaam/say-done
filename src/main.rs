@@ -70,6 +70,53 @@ impl Query {
         }
         return name;
     }
+
+    fn is_found(self, process_map: HashMap<String, Vec<Process>>) -> bool {
+        for (tty, process_list) in process_map {
+            if self.clone().is_matched(tty, process_list) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    fn is_matched(self, target_tty: String, target_process_list: Vec<Process>) -> bool {
+        match self.pid {
+            Some(ref pid) => {
+                let c = target_process_list
+                    .iter()
+                    .filter(|process| process.pid.eq(pid))
+                    .count();
+                if c > 0 {
+                    return true;
+                }
+            }
+            None => {}
+        }
+
+        match self.tty {
+            Some(ref tty) => {
+                if target_tty.eq(tty) && target_process_list.len() > 1 {
+                    return true;
+                }
+            }
+            None => {}
+        }
+
+        match self.command {
+            Some(ref command) => {
+                let c = target_process_list
+                    .iter()
+                    .filter(|process| process.command.starts_with(command))
+                    .count();
+                if c > 0 {
+                    return true;
+                }
+            }
+            None => {}
+        }
+        return false;
+    }
 }
 
 struct Process {
@@ -94,7 +141,7 @@ fn main() {
     for i in 0..MAX_MONITERING_TIME / INTERVAL {
         let output = Command::new("ps").output().expect(PS_COMMAND_FAILD_MESSAGE);
         let process_map = make_process_map(output.clone());
-        let is_continue = is_found(query.clone(), process_map);
+        let is_continue = query.clone().is_found(process_map);
         if is_continue {
             thread::sleep(time::Duration::from_secs(INTERVAL));
             if i % 6 == 0 {
@@ -176,44 +223,6 @@ fn make_process(process: &str) -> (String, Process) {
     );
 }
 
-fn is_matched(query: Query, target_tty: String, target_process_list: Vec<Process>) -> bool {
-    match query.pid {
-        Some(ref pid) => {
-            let c = target_process_list
-                .iter()
-                .filter(|process| process.pid.eq(pid))
-                .count();
-            if c > 0 {
-                return true;
-            }
-        }
-        None => {}
-    }
-
-    match query.tty {
-        Some(ref tty) => {
-            if target_tty.eq(tty) && target_process_list.len() > 1 {
-                return true;
-            }
-        }
-        None => {}
-    }
-
-    match query.command {
-        Some(ref command) => {
-            let c = target_process_list
-                .iter()
-                .filter(|process| process.command.starts_with(command))
-                .count();
-            if c > 0 {
-                return true;
-            }
-        }
-        None => {}
-    }
-    return false;
-}
-
 fn make_process_map(output: Output) -> HashMap<String, Vec<Process>> {
     let self_pid = std::process::id();
     let mut process_map: HashMap<String, Vec<Process>> = HashMap::new();
@@ -231,15 +240,6 @@ fn make_process_map(output: Output) -> HashMap<String, Vec<Process>> {
     }
 
     return process_map;
-}
-
-fn is_found(query: Query, process_map: HashMap<String, Vec<Process>>) -> bool {
-    for (tty, process_list) in process_map {
-        if is_matched(query.clone(), tty, process_list) {
-            return true;
-        }
-    }
-    return false;
 }
 
 fn print_target_not_found(target: String, output: Output) {
@@ -365,7 +365,7 @@ mod tests {
 
     #[test]
     fn is_matched_true() {
-        let args = Query {
+        let query = Query {
             command: Some(String::from("command")),
             pid: None,
             tty: None,
@@ -374,7 +374,7 @@ mod tests {
             pid: String::from("00000"),
             command: String::from("command"),
         };
-        let is_continue = is_matched(args, String::from("ttys001"), Vec::from([target_process]));
+        let is_continue = query.is_matched(String::from("ttys001"), Vec::from([target_process]));
         assert!(is_continue);
     }
 
@@ -389,7 +389,7 @@ mod tests {
             pid: String::from("00000"),
             command: String::from("command"),
         };
-        let is_continue = is_matched(query, String::from("ttys001"), Vec::from([target_process]));
+        let is_continue = query.is_matched(String::from("ttys001"), Vec::from([target_process]));
         assert!(!is_continue);
     }
 
@@ -408,7 +408,7 @@ mod tests {
         let process_list = Vec::from([process]);
         let mut process_map = HashMap::new();
         process_map.insert(tty, process_list);
-        assert!(is_found(query, process_map))
+        assert!(query.is_found(process_map))
     }
 
     #[test]
@@ -426,6 +426,6 @@ mod tests {
         let process_list = Vec::from([process]);
         let mut process_map = HashMap::new();
         process_map.insert(tty, process_list);
-        assert!(!is_found(query, process_map))
+        assert!(!query.is_found(process_map))
     }
 }
