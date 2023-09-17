@@ -32,21 +32,21 @@ impl Args {
         };
     }
 
-    fn is_some(self) -> bool {
+    fn is_some(&self) -> bool {
         return self.command.is_some() || self.pid.is_some() || self.tty.is_some();
     }
 
-    fn is_output(self) -> bool {
-        match self.output {
+    fn is_output(&self) -> bool {
+        return match self.output {
             Some(o) => {
                 if o == false {
-                    return !DEFAULT_OUTPUT;
+                    !DEFAULT_OUTPUT
                 } else {
-                    return DEFAULT_OUTPUT;
+                    DEFAULT_OUTPUT
                 }
             }
-            None => return DEFAULT_OUTPUT,
-        }
+            None => DEFAULT_OUTPUT,
+        };
     }
 }
 
@@ -71,7 +71,7 @@ impl Query {
         return name;
     }
 
-    fn is_found(self, process_map: HashMap<String, Vec<Process>>) -> bool {
+    fn is_found(&self, process_map: HashMap<String, Vec<Process>>) -> bool {
         for (tty, process_list) in process_map {
             if self.clone().is_matched(tty, process_list) {
                 return true;
@@ -80,7 +80,7 @@ impl Query {
         return false;
     }
 
-    fn is_matched(self, target_tty: String, target_process_list: Vec<Process>) -> bool {
+    fn is_matched(&self, target_tty: String, target_process_list: Vec<Process>) -> bool {
         match self.pid {
             Some(ref pid) => {
                 let c = target_process_list
@@ -125,7 +125,7 @@ struct Process {
 }
 
 const INTERVAL: u64 = 10;
-const PS_COMMAND_FAILD_MESSAGE: &str = "ps was failed.";
+const PS_COMMAND_FAILED_MESSAGE: &str = "ps was failed.";
 const DEFAULT_OUTPUT: bool = true;
 
 fn main() {
@@ -136,10 +136,10 @@ fn main() {
     let query_str = query.clone().make_str();
     let is_output = Args::parse().is_output();
     println!("monitoring ({})", query_str);
-    const MAX_MONITERING_TIME: u64 = 60 * 60 * 24;
+    const MAX_MONITORING_TIME: u64 = 60 * 60 * 24;
 
-    for i in 0..MAX_MONITERING_TIME / INTERVAL {
-        let output = Command::new("ps").output().expect(PS_COMMAND_FAILD_MESSAGE);
+    for i in 0..MAX_MONITORING_TIME / INTERVAL {
+        let output = Command::new("ps").output().expect(PS_COMMAND_FAILED_MESSAGE);
         let process_map = make_process_map(output.clone());
         let is_continue = query.clone().is_found(process_map);
         if is_continue {
@@ -174,7 +174,7 @@ fn make_query() -> Option<Query> {
         String::from_utf8_lossy(
             &Command::new("ps")
                 .output()
-                .expect(PS_COMMAND_FAILD_MESSAGE)
+                .expect(PS_COMMAND_FAILED_MESSAGE)
                 .stdout
         )
     );
@@ -191,33 +191,33 @@ fn make_query() -> Option<Query> {
     let mut tty = String::new();
     std::io::stdin().read_line(&mut tty).expect("");
 
-    if command.trim_end().is_empty() && pid.trim_end().is_empty() && tty.trim_end().is_empty() {
-        return None;
+    return if command.trim_end().is_empty() && pid.trim_end().is_empty() && tty.trim_end().is_empty() {
+        None
     } else {
-        return Some(Query {
+        Some(Query {
             command: Some(String::from(command.trim_end())),
             pid: Some(String::from(pid.trim_end())),
             tty: Some(String::from(tty.trim_end())),
-        });
-    }
+        })
+    };
 }
 
 fn make_process(process: &str) -> (String, Process) {
-    let process_splited: Vec<&str> = process.split_whitespace().collect();
+    let process_split: Vec<&str> = process.split_whitespace().collect();
     let pid_index = 0;
     let tty_index = 1;
     let command_start_index = 3;
-    let mut command = String::from(process_splited[command_start_index]);
-    if process_splited.len() > (command_start_index + 1) {
-        for i in (command_start_index + 1)..process_splited.len() {
-            command = command + " " + process_splited[i]
+    let mut command = String::from(process_split[command_start_index]);
+    if process_split.len() > (command_start_index + 1) {
+        for i in (command_start_index + 1)..process_split.len() {
+            command = command + " " + process_split[i]
         }
     }
 
     return (
-        String::from(process_splited[tty_index]),
+        String::from(process_split[tty_index]),
         Process {
-            pid: String::from(process_splited[pid_index]),
+            pid: String::from(process_split[pid_index]),
             command,
         },
     );
@@ -229,13 +229,11 @@ fn make_process_map(output: Output) -> HashMap<String, Vec<Process>> {
     for line in String::from_utf8_lossy(&output.stdout).lines() {
         if line.starts_with("  PID")
             || line.starts_with(&self_pid.to_string())
-            || line.starts_with(PS_COMMAND_FAILD_MESSAGE)
+            || line.starts_with(PS_COMMAND_FAILED_MESSAGE)
         {
             continue;
         }
-        let tty: String;
-        let process: Process;
-        (tty, process) = make_process(line);
+        let (tty, process) = make_process(line);
         process_map.entry(tty).or_insert(Vec::new()).push(process);
     }
 
@@ -272,7 +270,6 @@ fn notify_terminate(target: String, i: u64) {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
 
     #[test]
@@ -299,6 +296,7 @@ mod tests {
         let res = query.make_str();
         assert_eq!("tty: ttys000 ", res);
     }
+
     #[test]
     fn make_query_str_from_pid() {
         let query = Query {
