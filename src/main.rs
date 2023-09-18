@@ -23,13 +23,14 @@ struct Query {
     tty: Option<String>,
 }
 
+struct Process {
+    pid: String,
+    command: String,
+}
+
 impl Args {
     fn make_query(self) -> Query {
-        return Query {
-            command: self.command,
-            pid: self.pid,
-            tty: self.tty,
-        };
+        return Query::new(self.command, self.pid, self.tty);
     }
 
     fn is_some(&self) -> bool {
@@ -51,6 +52,14 @@ impl Args {
 }
 
 impl Query {
+    fn new(command: Option<String>, pid: Option<String>, tty: Option<String>) -> Query {
+        return Query {
+            command,
+            pid,
+            tty,
+        };
+    }
+
     fn make_str(self) -> String {
         let mut name = String::new();
 
@@ -119,9 +128,13 @@ impl Query {
     }
 }
 
-struct Process {
-    pid: String,
-    command: String,
+impl Process {
+    fn new(pid: String, command: String) -> Process {
+        return Process {
+            pid,
+            command,
+        };
+    }
 }
 
 const INTERVAL: u64 = 10;
@@ -194,11 +207,11 @@ fn make_query() -> Option<Query> {
     return if command.trim_end().is_empty() && pid.trim_end().is_empty() && tty.trim_end().is_empty() {
         None
     } else {
-        Some(Query {
-            command: Some(String::from(command.trim_end())),
-            pid: Some(String::from(pid.trim_end())),
-            tty: Some(String::from(tty.trim_end())),
-        })
+        Some(Query::new(
+            Some(String::from(command.trim_end())),
+            Some(String::from(pid.trim_end())),
+            Some(String::from(tty.trim_end())),
+        ))
     };
 }
 
@@ -216,10 +229,7 @@ fn make_process(process: &str) -> (String, Process) {
 
     return (
         String::from(process_split[tty_index]),
-        Process {
-            pid: String::from(process_split[pid_index]),
-            command,
-        },
+        Process::new(String::from(process_split[pid_index]), command)
     );
 }
 
@@ -288,33 +298,21 @@ mod tests {
 
     #[test]
     fn make_query_str_from_tty() {
-        let query = Query {
-            command: None,
-            pid: None,
-            tty: Some(String::from("ttys000")),
-        };
+        let query = Query::new(None, None, Some(String::from("ttys000")));
         let res = query.make_str();
         assert_eq!("tty: ttys000 ", res);
     }
 
     #[test]
     fn make_query_str_from_pid() {
-        let query = Query {
-            command: None,
-            pid: Some(String::from("00000")),
-            tty: Some(String::from("ttys000")),
-        };
+        let query = Query::new(None, Some(String::from("00000")), Some(String::from("ttys000")));
         let res = query.make_str();
         assert_eq!("pid: 00000 tty: ttys000 ", res);
     }
 
     #[test]
     fn make_query_str_from_command() {
-        let query = Query {
-            command: Some(String::from("command")),
-            pid: Some(String::from("00000")),
-            tty: Some(String::from("ttys000")),
-        };
+        let query = Query::new(Some(String::from("command")), Some(String::from("00000")), Some(String::from("ttys000")));
         let res = query.make_str();
         assert_eq!("command: command pid: 00000 tty: ttys000 ", res);
     }
@@ -363,45 +361,24 @@ mod tests {
 
     #[test]
     fn is_matched_true() {
-        let query = Query {
-            command: Some(String::from("command")),
-            pid: None,
-            tty: None,
-        };
-        let target_process = Process {
-            pid: String::from("00000"),
-            command: String::from("command"),
-        };
-        let is_continue = query.is_matched(String::from("ttys001"), Vec::from([target_process]));
+        let query = Query::new(Some(String::from("command")), None, None);
+        let process = Process::new(String::from("00000"), String::from("command"));
+        let is_continue = query.is_matched(String::from("ttys001"), Vec::from([process]));
         assert!(is_continue);
     }
 
     #[test]
     fn is_matched_false() {
-        let query = Query {
-            command: Some(String::from("ps")),
-            pid: None,
-            tty: None,
-        };
-        let target_process = Process {
-            pid: String::from("00000"),
-            command: String::from("command"),
-        };
-        let is_continue = query.is_matched(String::from("ttys001"), Vec::from([target_process]));
+        let query = Query::new(Some(String::from("ps")), None, None);
+        let process = Process::new(String::from("00000"), String::from("command"));
+        let is_continue = query.is_matched(String::from("ttys001"), Vec::from([process]));
         assert!(!is_continue);
     }
 
     #[test]
     fn is_found_true() {
-        let query = Query {
-            command: Some(String::from("command")),
-            pid: None,
-            tty: None,
-        };
-        let process = Process {
-            pid: String::from("00000"),
-            command: String::from("command"),
-        };
+        let query = Query::new(Some(String::from("command")), None, None);
+        let process = Process::new(String::from("00000"), String::from("command"));
         let tty = String::from("ttys001");
         let process_list = Vec::from([process]);
         let mut process_map = HashMap::new();
@@ -411,15 +388,8 @@ mod tests {
 
     #[test]
     fn is_found_false() {
-        let query = Query {
-            command: Some(String::from("ps")),
-            pid: None,
-            tty: None,
-        };
-        let process = Process {
-            pid: String::from("00000"),
-            command: String::from("command"),
-        };
+        let query = Query::new(Some(String::from("ps")), None, None);
+        let process = Process::new(String::from("00000"), String::from("command"));
         let tty = String::from("ttys001");
         let process_list = Vec::from([process]);
         let mut process_map = HashMap::new();
