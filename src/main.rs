@@ -282,14 +282,20 @@ fn notify_terminate(target: String, i: u64) {
 mod tests {
     use super::*;
 
+    impl Args {
+        fn new(command: Option<String>, pid: Option<String>, tty: Option<String>, output: Option<bool>) -> Args {
+            return Args {
+                command,
+                pid,
+                tty,
+                output,
+            };
+        }
+    }
+
     #[test]
     fn make_query() {
-        let args = Args {
-            command: Some(String::from("command")),
-            pid: Some(String::from("pid")),
-            tty: Some(String::from("tty")),
-            output: None,
-        };
+        let args = Args::new(Some(String::from("command")), Some(String::from("pid")), Some(String::from("tty")), None);
         let query = args.make_query();
         assert_eq!("command", query.command.unwrap());
         assert_eq!("pid", query.pid.unwrap());
@@ -319,34 +325,19 @@ mod tests {
 
     #[test]
     fn make_is_output_none() {
-        let args = Args {
-            command: None,
-            pid: None,
-            tty: None,
-            output: None,
-        };
+        let args = Args::new(None, None, None, None);
         assert!(args.is_output())
     }
 
     #[test]
     fn make_is_output_true() {
-        let args = Args {
-            command: None,
-            pid: None,
-            tty: None,
-            output: Some(true),
-        };
+        let args = Args::new(None, None, None, Some(true));
         assert!(args.is_output())
     }
 
     #[test]
     fn make_is_output_false() {
-        let args = Args {
-            command: None,
-            pid: None,
-            tty: None,
-            output: Some(false),
-        };
+        let args = Args::new(None, None, None, Some(false));
         assert!(!args.is_output())
     }
 
