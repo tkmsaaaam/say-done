@@ -372,8 +372,7 @@ mod tests {
         let process = Process::new(String::from("00000"), String::from("command"));
         let tty = String::from("ttys001");
         let process_list = Vec::from([process]);
-        let mut process_map = HashMap::new();
-        process_map.insert(tty, process_list);
+        let process_map = HashMap::from([(tty, process_list)]);
         assert!(query.is_found(process_map))
     }
 
@@ -383,8 +382,7 @@ mod tests {
         let process = Process::new(String::from("00000"), String::from("command"));
         let tty = String::from("ttys001");
         let process_list = Vec::from([process]);
-        let mut process_map = HashMap::new();
-        process_map.insert(tty, process_list);
+        let process_map = HashMap::from([(tty, process_list)]);
         assert!(!query.is_found(process_map))
     }
 }
