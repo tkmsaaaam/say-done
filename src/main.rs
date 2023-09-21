@@ -39,13 +39,7 @@ impl Args {
 
     fn is_output(&self) -> bool {
         return match self.output {
-            Some(o) => {
-                if o == false {
-                    !DEFAULT_OUTPUT
-                } else {
-                    DEFAULT_OUTPUT
-                }
-            }
+            Some(o) => o,
             None => DEFAULT_OUTPUT,
         };
     }
@@ -300,6 +294,30 @@ mod tests {
         assert_eq!("command", query.command.unwrap());
         assert_eq!("pid", query.pid.unwrap());
         assert_eq!("tty", query.tty.unwrap());
+    }
+
+    #[test]
+    fn is_some_true_command() {
+        let args = Args::new(Some(String::from("command")), None, None, None);
+        assert!(args.is_some());
+    }
+
+    #[test]
+    fn is_some_true_pid() {
+        let args = Args::new(None, Some(String::from("pid")), None, None);
+        assert!(args.is_some());
+    }
+
+    #[test]
+    fn is_some_true_tty() {
+        let args = Args::new(None, None, Some(String::from("tty")), None);
+        assert!(args.is_some());
+    }
+
+    #[test]
+    fn is_some_false() {
+        let args = Args::new(None, None, None, None);
+        assert!(!args.is_some());
     }
 
     #[test]
