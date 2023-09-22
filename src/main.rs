@@ -321,27 +321,6 @@ mod tests {
     }
 
     #[test]
-    fn make_query_str_from_tty() {
-        let query = Query::new(None, None, Some(String::from("ttys000")));
-        let res = query.make_str();
-        assert_eq!("tty: ttys000 ", res);
-    }
-
-    #[test]
-    fn make_query_str_from_pid() {
-        let query = Query::new(None, Some(String::from("00000")), Some(String::from("ttys000")));
-        let res = query.make_str();
-        assert_eq!("pid: 00000 tty: ttys000 ", res);
-    }
-
-    #[test]
-    fn make_query_str_from_command() {
-        let query = Query::new(Some(String::from("command")), Some(String::from("00000")), Some(String::from("ttys000")));
-        let res = query.make_str();
-        assert_eq!("command: command pid: 00000 tty: ttys000 ", res);
-    }
-
-    #[test]
     fn make_is_output_none() {
         let args = Args::new(None, None, None, None);
         assert!(args.is_output())
@@ -360,29 +339,35 @@ mod tests {
     }
 
     #[test]
-    fn make_process_ok() {
-        let process = "00000 ttys000    0:00.00 sleep 30";
-        let res = make_process(process);
-        assert_eq!("00000", res.1.pid);
-        assert_eq!("ttys000", res.0);
-        assert_eq!("sleep 30", res.1.command);
+    fn query_new() {
+        let query = Query::new(Some(String::from("command")), Some(String::from("pid")), Some(String::from("tty")));
+        assert_eq!("command", query.command.unwrap());
+        assert_eq!("pid", query.pid.unwrap());
+        assert_eq!("tty", query.tty.unwrap());
+    }
+
+
+    #[test]
+    fn make_str_from_tty() {
+        let query = Query::new(None, None, Some(String::from("ttys000")));
+        let res = query.make_str();
+        assert_eq!("tty: ttys000 ", res);
     }
 
     #[test]
-    fn is_matched_true() {
-        let query = Query::new(Some(String::from("command")), None, None);
-        let process = Process::new(String::from("00000"), String::from("command"));
-        let is_continue = query.is_matched(String::from("ttys001"), Vec::from([process]));
-        assert!(is_continue);
+    fn make_str_from_pid() {
+        let query = Query::new(None, Some(String::from("00000")), Some(String::from("ttys000")));
+        let res = query.make_str();
+        assert_eq!("pid: 00000 tty: ttys000 ", res);
     }
 
     #[test]
-    fn is_matched_false() {
-        let query = Query::new(Some(String::from("ps")), None, None);
-        let process = Process::new(String::from("00000"), String::from("command"));
-        let is_continue = query.is_matched(String::from("ttys001"), Vec::from([process]));
-        assert!(!is_continue);
+    fn make_str_from_command() {
+        let query = Query::new(Some(String::from("command")), Some(String::from("00000")), Some(String::from("ttys000")));
+        let res = query.make_str();
+        assert_eq!("command: command pid: 00000 tty: ttys000 ", res);
     }
+
 
     #[test]
     fn is_found_true() {
@@ -402,5 +387,37 @@ mod tests {
         let process_list = Vec::from([process]);
         let process_map = HashMap::from([(tty, process_list)]);
         assert!(!query.is_found(process_map))
+    }
+
+    #[test]
+    fn is_matched_true() {
+        let query = Query::new(Some(String::from("command")), None, None);
+        let process = Process::new(String::from("00000"), String::from("command"));
+        let is_continue = query.is_matched(String::from("ttys001"), Vec::from([process]));
+        assert!(is_continue);
+    }
+
+    #[test]
+    fn is_matched_false() {
+        let query = Query::new(Some(String::from("ps")), None, None);
+        let process = Process::new(String::from("00000"), String::from("command"));
+        let is_continue = query.is_matched(String::from("ttys001"), Vec::from([process]));
+        assert!(!is_continue);
+    }
+
+    #[test]
+    fn process_new() {
+        let process = Process::new(String::from("pid"), String::from("command"));
+        assert_eq!("pid", process.pid);
+        assert_eq!("command", process.command);
+    }
+
+    #[test]
+    fn make_process_ok() {
+        let process = "00000 ttys000    0:00.00 sleep 30";
+        let res = make_process(process);
+        assert_eq!("00000", res.1.pid);
+        assert_eq!("ttys000", res.0);
+        assert_eq!("sleep 30", res.1.command);
     }
 }
