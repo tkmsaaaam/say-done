@@ -4,7 +4,7 @@ use std::env::{self};
 use std::process::{Command, Output};
 use std::{thread, time};
 
-#[derive(Parser, Clone)]
+#[derive(Parser)]
 struct Args {
     #[arg(short = 'c', long = "command")]
     command: Option<String>,
@@ -16,7 +16,6 @@ struct Args {
     output: Option<bool>,
 }
 
-#[derive(Clone)]
 struct Query {
     command: Option<String>,
     pid: Option<String>,
@@ -54,7 +53,7 @@ impl Query {
         };
     }
 
-    fn make_str(self) -> String {
+    fn make_str(&self) -> String {
         let mut name = String::new();
 
         match self.command {
@@ -76,7 +75,7 @@ impl Query {
 
     fn is_found(&self, process_map: HashMap<String, Vec<Process>>) -> bool {
         for (tty, process_list) in process_map {
-            if self.clone().is_matched(tty, process_list) {
+            if self.is_matched(tty, process_list) {
                 return true;
             }
         }
@@ -140,7 +139,7 @@ fn main() {
         Some(q) => q,
         None => std::process::exit(0),
     };
-    let query_str = query.clone().make_str();
+    let query_str = query.make_str();
     let is_output = Args::parse().is_output();
     println!("monitoring ({})", query_str);
     const MAX_MONITORING_TIME: u64 = 60 * 60 * 24;
@@ -148,7 +147,7 @@ fn main() {
     for i in 0..MAX_MONITORING_TIME / INTERVAL {
         let output = Command::new("ps").output().expect(PS_COMMAND_FAILED_MESSAGE);
         let process_map = make_process_map(output.clone());
-        let is_continue = query.clone().is_found(process_map);
+        let is_continue = query.is_found(process_map);
         if is_continue {
             thread::sleep(time::Duration::from_secs(INTERVAL));
             if i % 6 == 0 {
@@ -171,7 +170,7 @@ fn main() {
 fn make_query() -> Option<Query> {
     let args = Args::parse();
 
-    if args.clone().is_some() {
+    if args.is_some() {
         let query = args.make_query();
         return Some(query);
     }
