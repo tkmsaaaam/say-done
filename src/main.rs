@@ -54,7 +54,7 @@ impl Query {
     }
 
     fn make_str(&self) -> String {
-        let mut name = String::new();
+        let mut name = String::from("(");
 
         match self.command {
             Some(ref command) => name = name + "command: " + command + " ",
@@ -70,6 +70,8 @@ impl Query {
             Some(ref tty) => name = name + "tty: " + tty + " ",
             None => {}
         }
+        name = name.trim_end().parse().unwrap();
+        name = name + ")";
         return name;
     }
 
@@ -141,7 +143,7 @@ fn main() {
     };
     let query_str = query.make_str();
     let is_output = Args::parse().is_output();
-    println!("monitoring ({})", query_str);
+    println!("monitoring {}", query_str);
     const MAX_MONITORING_TIME: u64 = 60 * 60 * 24;
 
     for i in 0..MAX_MONITORING_TIME / INTERVAL {
@@ -164,7 +166,7 @@ fn main() {
         notify_terminate(query_str, i);
         std::process::exit(0);
     }
-    println!("({}) has been running over an hour.", query_str);
+    println!("{} has been running over an hour.", query_str);
 }
 
 fn make_query() -> Option<Query> {
@@ -245,7 +247,7 @@ fn make_process_map(output: Output) -> HashMap<String, Vec<Process>> {
 
 fn print_target_not_found(target: String, output: Output) {
     println!(
-        "({}) is not found. or ({}) is not started.\nps result:",
+        "{} is not found. or {} is not started.\nps result:",
         target, target
     );
     println!("{:?}", String::from_utf8(output.stdout));
@@ -256,7 +258,7 @@ fn notify_terminate(target: String, i: u64) {
         .arg("Done!")
         .output()
         .expect("say was failed.");
-    println!("({}) was finished. time: {}s", target, i * INTERVAL);
+    println!("{} was finished. time: {}s", target, i * INTERVAL);
     if env::consts::OS == "macos" {
         let arg = String::from("display notification \"")
             + &target
@@ -350,21 +352,21 @@ mod tests {
     fn make_str_from_tty() {
         let query = Query::new(None, None, Some(String::from("ttys000")));
         let res = query.make_str();
-        assert_eq!("tty: ttys000 ", res);
+        assert_eq!("(tty: ttys000)", res);
     }
 
     #[test]
     fn make_str_from_pid() {
         let query = Query::new(None, Some(String::from("00000")), Some(String::from("ttys000")));
         let res = query.make_str();
-        assert_eq!("pid: 00000 tty: ttys000 ", res);
+        assert_eq!("(pid: 00000 tty: ttys000)", res);
     }
 
     #[test]
     fn make_str_from_command() {
         let query = Query::new(Some(String::from("command")), Some(String::from("00000")), Some(String::from("ttys000")));
         let res = query.make_str();
-        assert_eq!("command: command pid: 00000 tty: ttys000 ", res);
+        assert_eq!("(command: command pid: 00000 tty: ttys000)", res);
     }
 
 
