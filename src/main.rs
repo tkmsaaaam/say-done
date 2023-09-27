@@ -14,6 +14,8 @@ struct Args {
     tty: Option<String>,
     #[arg(short = 'o', long = "output")]
     output: Option<bool>,
+    #[arg(short = 'i', long = "interval")]
+    interval: Option<u8>,
 }
 
 struct Query {
@@ -37,9 +39,18 @@ impl Args {
     }
 
     fn is_output(&self) -> bool {
+        const DEFAULT_OUTPUT: bool = true;
         return match self.output {
             Some(o) => o,
             None => DEFAULT_OUTPUT,
+        };
+    }
+
+    fn get_interval(&self) -> u8 {
+        const DEFAULT_INTERVAL: u8 = 10;
+        return match self.interval {
+            Some(i) => i,
+            None => DEFAULT_INTERVAL,
         };
     }
 }
@@ -132,9 +143,7 @@ impl Process {
     }
 }
 
-const INTERVAL: u64 = 10;
 const PS_COMMAND_FAILED_MESSAGE: &str = "ps was failed.";
-const DEFAULT_OUTPUT: bool = true;
 
 fn main() {
     let query = match make_query() {
@@ -144,15 +153,17 @@ fn main() {
     let query_str = query.make_str();
     let is_output = Args::parse().is_output();
     println!("monitoring {}", query_str);
-    const MAX_MONITORING_TIME: u64 = 60 * 60 * 24;
+    const ONE_MINUTE: u8 = 60;
+    const MAX_MONITORING_TIME: u32 = ONE_MINUTE as u32 * 60_u32 * 24_u32;
+    let interval = Args::parse().get_interval();
 
-    for i in 0..MAX_MONITORING_TIME / INTERVAL {
+    for i in 0..MAX_MONITORING_TIME / interval as u32 {
         let output = Command::new("ps").output().expect(PS_COMMAND_FAILED_MESSAGE);
         let process_map = make_process_map(output.clone());
         let is_continue = query.is_found(process_map);
         if is_continue {
-            thread::sleep(time::Duration::from_secs(INTERVAL));
-            if i % 6 == 0 {
+            thread::sleep(time::Duration::from_secs(interval as u64));
+            if i % (ONE_MINUTE / interval) as u32 == 0 {
                 if is_output {
                     println!("{} minutes", i / 6);
                 }
@@ -163,7 +174,7 @@ fn main() {
             print_target_not_found(query_str, output);
             std::process::exit(0);
         }
-        notify_terminate(query_str, i);
+        notify_terminate(query_str, i, interval);
         std::process::exit(0);
     }
     println!("{} has been running over an hour.", query_str);
@@ -253,12 +264,12 @@ fn print_target_not_found(target: String, output: Output) {
     println!("{:?}", String::from_utf8(output.stdout));
 }
 
-fn notify_terminate(target: String, i: u64) {
+fn notify_terminate(target: String, i: u32, interval: u8) {
     Command::new("say")
         .arg("Done!")
         .output()
         .expect("say was failed.");
-    println!("{} was finished. time: {}s", target, i * INTERVAL);
+    println!("{} was finished. time: {}s", target, i * interval as u32);
     if env::consts::OS == "macos" {
         let arg = String::from("display notification \"")
             + &target
@@ -278,19 +289,20 @@ mod tests {
     use super::*;
 
     impl Args {
-        fn new(command: Option<String>, pid: Option<String>, tty: Option<String>, output: Option<bool>) -> Args {
+        fn new(command: Option<String>, pid: Option<String>, tty: Option<String>, output: Option<bool>, interval: Option<u8>) -> Args {
             return Args {
                 command,
                 pid,
                 tty,
                 output,
+                interval,
             };
         }
     }
 
     #[test]
     fn make_query() {
-        let args = Args::new(Some(String::from("command")), Some(String::from("pid")), Some(String::from("tty")), None);
+        let args = Args::new(Some(String::from("command")), Some(String::from("pid")), Some(String::from("tty")), None, None);
         let query = args.make_query();
         assert_eq!("command", query.command.unwrap());
         assert_eq!("pid", query.pid.unwrap());
@@ -299,43 +311,43 @@ mod tests {
 
     #[test]
     fn is_some_true_command() {
-        let args = Args::new(Some(String::from("command")), None, None, None);
+        let args = Args::new(Some(String::from("command")), None, None, None, None);
         assert!(args.is_some());
     }
 
     #[test]
     fn is_some_true_pid() {
-        let args = Args::new(None, Some(String::from("pid")), None, None);
+        let args = Args::new(None, Some(String::from("pid")), None, None, None);
         assert!(args.is_some());
     }
 
     #[test]
     fn is_some_true_tty() {
-        let args = Args::new(None, None, Some(String::from("tty")), None);
+        let args = Args::new(None, None, Some(String::from("tty")), None, None);
         assert!(args.is_some());
     }
 
     #[test]
     fn is_some_false() {
-        let args = Args::new(None, None, None, None);
+        let args = Args::new(None, None, None, None, None);
         assert!(!args.is_some());
     }
 
     #[test]
     fn make_is_output_none() {
-        let args = Args::new(None, None, None, None);
+        let args = Args::new(None, None, None, None, None);
         assert!(args.is_output())
     }
 
     #[test]
     fn make_is_output_true() {
-        let args = Args::new(None, None, None, Some(true));
+        let args = Args::new(None, None, None, Some(true), None);
         assert!(args.is_output())
     }
 
     #[test]
     fn make_is_output_false() {
-        let args = Args::new(None, None, None, Some(false));
+        let args = Args::new(None, None, None, Some(false), None);
         assert!(!args.is_output())
     }
 
