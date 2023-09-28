@@ -352,6 +352,20 @@ mod tests {
     }
 
     #[test]
+    fn get_interval_default() {
+        let args = Args::new(None, None, None, None, None);
+        let interval = args.get_interval();
+        assert_eq!(10_u8, interval);
+    }
+
+    #[test]
+    fn get_interval_explicit() {
+        let args = Args::new(None, None, None, None, Some(1_u8));
+        let interval = args.get_interval();
+        assert_eq!(1_u8, interval);
+    }
+
+    #[test]
     fn query_new() {
         let query = Query::new(Some(String::from("command")), Some(String::from("pid")), Some(String::from("tty")));
         assert_eq!("command", query.command.unwrap());
