@@ -144,6 +144,7 @@ impl Process {
 }
 
 const PS_COMMAND_FAILED_MESSAGE: &str = "ps was failed.";
+const ONE_MINUTE: u8 = 60;
 
 fn main() {
     let query = match make_query() {
@@ -153,7 +154,6 @@ fn main() {
     let query_str = query.make_str();
     let is_output = Args::parse().is_output();
     println!("monitoring {}", query_str);
-    const ONE_MINUTE: u8 = 60;
     const MAX_MONITORING_TIME: u32 = ONE_MINUTE as u32 * 60_u32 * 24_u32;
     let interval = Args::parse().get_interval();
 
@@ -163,10 +163,8 @@ fn main() {
         let is_continue = query.is_found(process_map);
         if is_continue {
             thread::sleep(time::Duration::from_secs(interval as u64));
-            if i % (ONE_MINUTE / interval) as u32 == 0 {
-                if is_output {
-                    println!("{} minutes", i / 6);
-                }
+            if is_every_minute(i, interval) && is_output {
+                println!("{} minutes", i / 6);
             }
             continue;
         }
@@ -219,6 +217,10 @@ fn make_query() -> Option<Query> {
             Some(String::from(tty.trim_end())),
         ))
     };
+}
+
+fn is_every_minute(i: u32, interval: u8) -> bool {
+    return i % (ONE_MINUTE / interval) as u32 == 0;
 }
 
 fn make_process(process: &str) -> (String, Process) {
