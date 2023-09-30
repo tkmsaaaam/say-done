@@ -442,6 +442,37 @@ mod tests {
     }
 
     #[test]
+    fn is_every_minute_true() {
+        let i_six = 6_u32;
+        let interval_ten = 10_u8;
+        assert!(is_every_minute(i_six, interval_ten));
+
+        let i_twelve = 12_u32;
+        assert!(is_every_minute(i_twelve, interval_ten));
+
+        let i_two = 2_u32;
+        let interval_thirty = 30_u8;
+        assert!(is_every_minute(i_two, interval_thirty));
+
+        let i_four = 4_u32;
+        assert!(is_every_minute(i_four, interval_thirty));
+    }
+
+    #[test]
+    fn is_every_minute_false() {
+        let i_one = 1_u32;
+        let interval_ten = 10_u8;
+        assert!(!is_every_minute(i_one, interval_ten));
+
+        let i_eight = 8_u32;
+        assert!(!is_every_minute(i_eight, interval_ten));
+
+
+        let interval_thirty = 30_u8;
+        assert!(!is_every_minute(i_one, interval_thirty));
+    }
+
+    #[test]
     fn make_process_ok() {
         let process = "00000 ttys000    0:00.00 sleep 30";
         let res = make_process(process);
