@@ -160,20 +160,18 @@ fn main() {
     for i in 0..MAX_MONITORING_TIME / interval as u32 {
         let output = Command::new("ps").output().expect(PS_COMMAND_FAILED_MESSAGE);
         let process_map = make_process_map(output.clone());
-        let is_continue = query.is_found(process_map);
-        if is_continue {
-            thread::sleep(time::Duration::from_secs(interval as u64));
-            if is_every_minute(i, interval) && is_output {
-                println!("{} minutes", i / 6);
+        if !query.is_found(process_map) {
+            if i == 0 {
+                print_target_not_found(query_str, output);
+            } else {
+                notify_terminate(query_str, i, interval);
             }
-            continue;
-        }
-        if i == 0 {
-            print_target_not_found(query_str, output);
             std::process::exit(0);
         }
-        notify_terminate(query_str, i, interval);
-        std::process::exit(0);
+        if is_every_minute(i, interval) && is_output {
+            println!("{} minutes", i / 6);
+        }
+        thread::sleep(time::Duration::from_secs(interval as u64));
     }
     println!("{} has been running over an hour.", query_str);
 }
