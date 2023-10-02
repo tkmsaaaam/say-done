@@ -169,7 +169,7 @@ fn main() {
             std::process::exit(0);
         }
         if is_every_minute(i, interval) && is_output {
-            println!("{} minutes", i / 6);
+            println!("{} minutes", i / (ONE_MINUTE / interval) as u32);
         }
         thread::sleep(time::Duration::from_secs(interval as u64));
     }
