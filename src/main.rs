@@ -1,8 +1,9 @@
-use clap::Parser;
+use std::{thread, time};
 use std::collections::HashMap;
 use std::env::{self};
 use std::process::{Command, Output};
-use std::{thread, time};
+
+use clap::Parser;
 
 #[derive(Parser)]
 struct Args {
@@ -158,18 +159,18 @@ fn main() {
     let interval = Args::parse().get_interval();
 
     for i in 0..MAX_MONITORING_TIME / interval as u32 {
-        let output = Command::new("ps").output().expect(PS_COMMAND_FAILED_MESSAGE);
-        let process_map = make_process_map(output.clone());
+        let ps_result = Command::new("ps").output().expect(PS_COMMAND_FAILED_MESSAGE);
+        let process_map = make_process_map(ps_result.clone());
         if !query.is_found(process_map) {
             if i == 0 {
-                print_target_not_found(query_str, output);
+                print_target_not_found(query_str, ps_result);
             } else {
                 notify_terminate(query_str, i, interval);
             }
             std::process::exit(0);
         }
         if is_every_minute(i, interval) && is_output {
-            println!("{} minutes", i / (ONE_MINUTE / interval) as u32);
+            println!("{} minutes", elapsed_minute(i, interval));
         }
         thread::sleep(time::Duration::from_secs(interval as u64));
     }
@@ -219,6 +220,10 @@ fn make_query() -> Option<Query> {
 
 fn is_every_minute(i: u32, interval: u8) -> bool {
     return i % (ONE_MINUTE / interval) as u32 == 0;
+}
+
+fn elapsed_minute(i: u32, interval: u8) -> u32 {
+    return i / (ONE_MINUTE / interval) as u32;
 }
 
 fn make_process(process: &str) -> (String, Process) {
