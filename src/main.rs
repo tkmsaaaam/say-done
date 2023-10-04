@@ -155,7 +155,7 @@ fn main() {
     let query_str = query.make_str();
     let is_output = Args::parse().is_output();
     println!("monitoring {}", query_str);
-    const MAX_MONITORING_TIME: u32 = ONE_MINUTE as u32 * 60_u32 * 24_u32;
+    const MAX_MONITORING_TIME: u32 = ONE_MINUTE as u32 * 60u32 * 24u32;
     let interval = Args::parse().get_interval();
 
     for i in 0..MAX_MONITORING_TIME / interval as u32 {
@@ -360,14 +360,14 @@ mod tests {
     fn get_interval_default() {
         let args = Args::new(None, None, None, None, None);
         let interval = args.get_interval();
-        assert_eq!(10_u8, interval);
+        assert_eq!(10u8, interval);
     }
 
     #[test]
     fn get_interval_explicit() {
-        let args = Args::new(None, None, None, None, Some(1_u8));
+        let args = Args::new(None, None, None, None, Some(1u8));
         let interval = args.get_interval();
-        assert_eq!(1_u8, interval);
+        assert_eq!(1u8, interval);
     }
 
     #[test]
@@ -446,33 +446,39 @@ mod tests {
 
     #[test]
     fn is_every_minute_true() {
-        let i_six = 6_u32;
-        let interval_ten = 10_u8;
+        let i_six = 6u32;
+        let interval_ten = 10u8;
         assert!(is_every_minute(i_six, interval_ten));
 
-        let i_twelve = 12_u32;
+        let i_twelve = 12u32;
         assert!(is_every_minute(i_twelve, interval_ten));
 
-        let i_two = 2_u32;
-        let interval_thirty = 30_u8;
+        let i_two = 2u32;
+        let interval_thirty = 30u8;
         assert!(is_every_minute(i_two, interval_thirty));
 
-        let i_four = 4_u32;
+        let i_four = 4u32;
         assert!(is_every_minute(i_four, interval_thirty));
     }
 
     #[test]
     fn is_every_minute_false() {
-        let i_one = 1_u32;
-        let interval_ten = 10_u8;
+        let i_one = 1u32;
+        let interval_ten = 10u8;
         assert!(!is_every_minute(i_one, interval_ten));
 
-        let i_eight = 8_u32;
+        let i_eight = 8u32;
         assert!(!is_every_minute(i_eight, interval_ten));
 
 
-        let interval_thirty = 30_u8;
+        let interval_thirty = 30u8;
         assert!(!is_every_minute(i_one, interval_thirty));
+    }
+
+    #[test]
+    fn elapsed_minute_() {
+        assert_eq!(1u32, elapsed_minute(6u32, 10u8));
+        assert_eq!(1u32, elapsed_minute(3u32, 20u8));
     }
 
     #[test]
