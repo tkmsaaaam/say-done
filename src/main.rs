@@ -99,11 +99,10 @@ impl Query {
     fn is_matched(&self, target_tty: String, target_process_list: Vec<Process>) -> bool {
         match self.pid {
             Some(ref pid) => {
-                let c = target_process_list
+                let is_presented = target_process_list
                     .iter()
-                    .filter(|process| process.pid.eq(pid))
-                    .count();
-                if c > 0 {
+                    .any(|process| process.pid.eq(pid));
+                if is_presented {
                     return true;
                 }
             }
@@ -121,11 +120,10 @@ impl Query {
 
         match self.command {
             Some(ref command) => {
-                let c = target_process_list
+                let is_present = target_process_list
                     .iter()
-                    .filter(|process| process.command.starts_with(command))
-                    .count();
-                if c > 0 {
+                    .any(|process| process.command.starts_with(command));
+                if is_present {
                     return true;
                 }
             }
