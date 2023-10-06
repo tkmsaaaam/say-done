@@ -25,6 +25,7 @@ struct Query {
     tty: Option<String>,
 }
 
+#[derive(Clone)]
 struct Process {
     pid: String,
     command: String,
@@ -88,12 +89,8 @@ impl Query {
     }
 
     fn is_found(&self, process_map: HashMap<String, Vec<Process>>) -> bool {
-        for (tty, process_list) in process_map {
-            if self.is_matched(tty, process_list) {
-                return true;
-            }
-        }
-        return false;
+        return process_map.iter()
+            .any(|(tty, process_list)| self.is_matched(tty.to_owned(), process_list.clone()));
     }
 
     fn is_matched(&self, target_tty: String, target_process_list: Vec<Process>) -> bool {
