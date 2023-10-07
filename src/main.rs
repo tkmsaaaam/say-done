@@ -25,7 +25,6 @@ struct Query {
     tty: Option<String>,
 }
 
-#[derive(Clone)]
 struct Process {
     pid: String,
     command: String,
@@ -90,10 +89,10 @@ impl Query {
 
     fn is_found(&self, process_map: HashMap<String, Vec<Process>>) -> bool {
         return process_map.iter()
-            .any(|(tty, process_list)| self.is_matched(tty.to_owned(), process_list.clone()));
+            .any(|(tty, process_list)| self.is_matched(tty, process_list));
     }
 
-    fn is_matched(&self, target_tty: String, target_process_list: Vec<Process>) -> bool {
+    fn is_matched(&self, target_tty: &str, target_process_list: &Vec<Process>) -> bool {
         match self.pid {
             Some(ref pid) => {
                 let is_presented = target_process_list
@@ -420,7 +419,7 @@ mod tests {
     fn is_matched_true() {
         let query = Query::new(Some(String::from("command")), None, None);
         let process = Process::new(String::from("00000"), String::from("command"));
-        let is_continue = query.is_matched(String::from("ttys001"), Vec::from([process]));
+        let is_continue = query.is_matched("ttys001", Vec::from([process]).as_ref());
         assert!(is_continue);
     }
 
@@ -428,7 +427,7 @@ mod tests {
     fn is_matched_false() {
         let query = Query::new(Some(String::from("ps")), None, None);
         let process = Process::new(String::from("00000"), String::from("command"));
-        let is_continue = query.is_matched(String::from("ttys001"), Vec::from([process]));
+        let is_continue = query.is_matched("ttys001", Vec::from([process]).as_ref());
         assert!(!is_continue);
     }
 
