@@ -204,11 +204,22 @@ fn make_query() -> Option<Query> {
     return if command.trim_end().is_empty() && pid.trim_end().is_empty() && tty.trim_end().is_empty() {
         None
     } else {
-        Some(Query::new(
-            Some(String::from(command.trim_end())),
-            Some(String::from(pid.trim_end())),
-            Some(String::from(tty.trim_end())),
-        ))
+        let c = if command.trim_end().is_empty() {
+            None
+        } else {
+            Some(String::from(command.trim_end()))
+        };
+        let p = if pid.trim_end().is_empty() {
+            None
+        } else {
+            Some(String::from(pid.trim_end()))
+        };
+        let t = if tty.trim_end().is_empty() {
+            None
+        } else {
+            Some(String::from(tty.trim_end()))
+        };
+        Some(Query::new(c, p, t, ))
     };
 }
 
