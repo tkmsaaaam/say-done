@@ -171,6 +171,17 @@ fn main() {
     println!("{} has been running over an hour.", query_str);
 }
 
+fn make_query_element(element_name: &str) -> Option<String> {
+    println!("{}", element_name);
+    let mut element = String::new();
+    std::io::stdin().read_line(&mut element).expect("");
+    if element.trim_end().is_empty() {
+        return None
+    } else {
+        Some(String::from(element.trim_end()))
+    }
+}
+
 fn make_query() -> Option<Query> {
     let args = Args::parse();
 
@@ -189,37 +200,14 @@ fn make_query() -> Option<Query> {
         )
     );
 
-    println!("command:");
-    let mut command = String::new();
-    std::io::stdin().read_line(&mut command).expect("");
+    let command = make_query_element("command:");
+    let pid = make_query_element("pid:");
+    let tty = make_query_element("tty:");
 
-    println!("pid:");
-    let mut pid = String::new();
-    std::io::stdin().read_line(&mut pid).expect("");
-
-    println!("tty:");
-    let mut tty = String::new();
-    std::io::stdin().read_line(&mut tty).expect("");
-
-    return if command.trim_end().is_empty() && pid.trim_end().is_empty() && tty.trim_end().is_empty() {
+    return if command.is_none() && pid.is_none() && tty.is_none() {
         None
     } else {
-        let c = if command.trim_end().is_empty() {
-            None
-        } else {
-            Some(String::from(command.trim_end()))
-        };
-        let p = if pid.trim_end().is_empty() {
-            None
-        } else {
-            Some(String::from(pid.trim_end()))
-        };
-        let t = if tty.trim_end().is_empty() {
-            None
-        } else {
-            Some(String::from(tty.trim_end()))
-        };
-        Some(Query::new(c, p, t, ))
+        Some(Query::new(command, pid, tty))
     };
 }
 
