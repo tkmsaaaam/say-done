@@ -172,7 +172,7 @@ fn main() {
 }
 
 fn make_query_element(element_name: &str) -> Option<String> {
-    println!("{}", element_name);
+    println!("{}:", element_name);
     let mut element = String::new();
     std::io::stdin().read_line(&mut element).expect("");
     if element.trim_end().is_empty() {
@@ -200,9 +200,9 @@ fn make_query() -> Option<Query> {
         )
     );
 
-    let command = make_query_element("command:");
-    let pid = make_query_element("pid:");
-    let tty = make_query_element("tty:");
+    let command = make_query_element("command");
+    let pid = make_query_element("pid");
+    let tty = make_query_element("tty");
 
     return if command.is_none() && pid.is_none() && tty.is_none() {
         None
