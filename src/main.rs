@@ -477,9 +477,9 @@ mod tests {
     #[test]
     fn make_process_ok() {
         let process = "00000 ttys000    0:00.00 sleep 30";
-        let res = make_process(process);
-        assert_eq!("00000", res.1.pid);
-        assert_eq!("ttys000", res.0);
-        assert_eq!("sleep 30", res.1.command);
+        let (tty, process) = make_process(process);
+        assert_eq!("00000", process.pid);
+        assert_eq!("ttys000", tty);
+        assert_eq!("sleep 30", process.command);
     }
 }
