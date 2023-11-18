@@ -58,72 +58,55 @@ impl Args {
 
 impl Query {
     fn new(command: Option<String>, pid: Option<String>, tty: Option<String>) -> Query {
-        return Query {
-            command,
-            pid,
-            tty,
-        };
+        return Query { command, pid, tty };
     }
 
     fn make_str(&self) -> String {
-        let mut name = String::from("(");
+        let c = match self.command {
+            Some(ref command) => String::from("command: ") + command + " ",
+            None => String::new()
+        };
 
-        match self.command {
-            Some(ref command) => name = name + "command: " + command + " ",
-            None => {}
-        }
+        let p = match self.pid {
+            Some(ref pid) => String::from("pid: ") + pid + " ",
+            None => String::new()
+        };
 
-        match self.pid {
-            Some(ref pid) => name = name + "pid: " + pid + " ",
-            None => {}
-        }
-
-        match self.tty {
-            Some(ref tty) => name = name + "tty: " + tty + " ",
-            None => {}
-        }
-        name = name.trim_end().parse().unwrap();
-        name = name + ")";
-        return name;
+        let t = match self.tty {
+            Some(ref tty) => String::from("tty: ") + tty + " ",
+            None => String::new()
+        };
+        return String::from("(") + &*c + &*p + &*t + ")";
     }
 
     fn is_found(&self, process_map: HashMap<String, Vec<Process>>) -> bool {
-        return process_map.iter()
-            .any(|(tty, process_list)| self.is_matched(tty, process_list));
+        return process_map.iter().any(|(tty, process_list)| self.is_matched(tty, process_list));
     }
 
     fn is_matched(&self, target_tty: &str, target_process_list: &Vec<Process>) -> bool {
         match self.pid {
-            Some(ref pid) => {
-                let is_presented = target_process_list
-                    .iter()
-                    .any(|process| process.pid.eq(pid));
-                if is_presented {
-                    return true;
-                }
+            Some(ref pid) if target_process_list
+                .iter()
+                .any(|process| process.pid.eq(pid)) => {
+                return true;
             }
-            None => {}
+            _ => ()
         }
 
         match self.tty {
-            Some(ref tty) => {
-                if target_tty.eq(tty) && target_process_list.len() > 1 {
-                    return true;
-                }
+            Some(ref tty) if target_tty.eq(tty) && target_process_list.len() > 1 => {
+                return true;
             }
-            None => {}
+            _ => ()
         }
 
         match self.command {
-            Some(ref command) => {
-                let is_present = target_process_list
-                    .iter()
-                    .any(|process| process.command.starts_with(command));
-                if is_present {
-                    return true;
-                }
+            Some(ref command) if target_process_list
+                .iter()
+                .any(|process| process.command.starts_with(command)) => {
+                return true;
             }
-            None => {}
+            _ => ()
         }
         return false;
     }
@@ -131,10 +114,7 @@ impl Query {
 
 impl Process {
     fn new(pid: String, command: String) -> Process {
-        return Process {
-            pid,
-            command,
-        };
+        return Process { pid, command };
     }
 }
 
@@ -176,7 +156,7 @@ fn make_query_element(element_name: &str) -> Option<String> {
     let mut element = String::new();
     std::io::stdin().read_line(&mut element).expect("");
     if element.trim_end().is_empty() {
-        return None
+        return None;
     } else {
         Some(String::from(element.trim_end()))
     }
@@ -376,21 +356,21 @@ mod tests {
     fn make_str_from_tty() {
         let query = Query::new(None, None, Some(String::from("ttys000")));
         let res = query.make_str();
-        assert_eq!("(tty: ttys000)", res);
+        assert_eq!("(tty: ttys000 )", res);
     }
 
     #[test]
     fn make_str_from_pid() {
         let query = Query::new(None, Some(String::from("00000")), Some(String::from("ttys000")));
         let res = query.make_str();
-        assert_eq!("(pid: 00000 tty: ttys000)", res);
+        assert_eq!("(pid: 00000 tty: ttys000 )", res);
     }
 
     #[test]
     fn make_str_from_command() {
         let query = Query::new(Some(String::from("command")), Some(String::from("00000")), Some(String::from("ttys000")));
         let res = query.make_str();
-        assert_eq!("(command: command pid: 00000 tty: ttys000)", res);
+        assert_eq!("(command: command pid: 00000 tty: ttys000 )", res);
     }
 
 
