@@ -1,21 +1,21 @@
-use std::{thread, time};
 use std::collections::HashMap;
 use std::env::{self};
 use std::process::{Command, Output};
+use std::{thread, time};
 
 use clap::Parser;
 
 #[derive(Parser)]
 struct Args {
-    #[arg(short = 'c', long = "command")]
+    #[arg(short, long)]
     command: Option<String>,
-    #[arg(short = 'p', long = "pid")]
+    #[arg(short, long)]
     pid: Option<String>,
-    #[arg(short = 't', long = "tty")]
+    #[arg(short, long)]
     tty: Option<String>,
-    #[arg(short = 'o', long = "output")]
+    #[arg(short, long)]
     output: Option<bool>,
-    #[arg(short = 'i', long = "interval")]
+    #[arg(short, long)]
     interval: Option<u8>,
 }
 
@@ -64,49 +64,55 @@ impl Query {
     fn make_str(&self) -> String {
         let c = match self.command {
             Some(ref command) => String::from("command: ") + command + " ",
-            None => String::new()
+            None => String::new(),
         };
 
         let p = match self.pid {
             Some(ref pid) => String::from("pid: ") + pid + " ",
-            None => String::new()
+            None => String::new(),
         };
 
         let t = match self.tty {
             Some(ref tty) => String::from("tty: ") + tty + " ",
-            None => String::new()
+            None => String::new(),
         };
-        return String::from("(") + &*c + &*p + &*t + ")";
+        return format!("({}{}{})", c, p, t);
     }
 
     fn is_found(&self, process_map: HashMap<String, Vec<Process>>) -> bool {
-        return process_map.iter().any(|(tty, process_list)| self.is_matched(tty, process_list));
+        return process_map
+            .iter()
+            .any(|(tty, process_list)| self.is_matched(tty, process_list));
     }
 
     fn is_matched(&self, target_tty: &str, target_process_list: &Vec<Process>) -> bool {
         match self.pid {
-            Some(ref pid) if target_process_list
-                .iter()
-                .any(|process| process.pid.eq(pid)) => {
+            Some(ref pid)
+                if target_process_list
+                    .iter()
+                    .any(|process| process.pid.eq(pid)) =>
+            {
                 return true;
             }
-            _ => ()
+            _ => (),
         }
 
         match self.tty {
             Some(ref tty) if target_tty.eq(tty) && target_process_list.len() > 1 => {
                 return true;
             }
-            _ => ()
+            _ => (),
         }
 
         match self.command {
-            Some(ref command) if target_process_list
-                .iter()
-                .any(|process| process.command.starts_with(command)) => {
+            Some(ref command)
+                if target_process_list
+                    .iter()
+                    .any(|process| process.command.starts_with(command)) =>
+            {
                 return true;
             }
-            _ => ()
+            _ => (),
         }
         return false;
     }
@@ -128,18 +134,20 @@ fn main() {
     };
     let query_str = query.make_str();
     let is_output = Args::parse().is_output();
-    println!("monitoring {}", query_str);
+    println!("monitoring {}", &query_str);
     const MAX_MONITORING_TIME: u32 = ONE_MINUTE as u32 * 60u32 * 24u32;
     let interval = Args::parse().get_interval();
 
     for i in 0..MAX_MONITORING_TIME / interval as u32 {
-        let ps_result = Command::new("ps").output().expect(PS_COMMAND_FAILED_MESSAGE);
+        let ps_result = Command::new("ps")
+            .output()
+            .expect(PS_COMMAND_FAILED_MESSAGE);
         let process_map = make_process_map(ps_result.clone());
         if !query.is_found(process_map) {
             if i == 0 {
-                print_target_not_found(query_str, ps_result);
+                print_target_not_found(&query_str, ps_result);
             } else {
-                notify_terminate(query_str, i, interval);
+                notify_terminate(&query_str, i, interval);
             }
             std::process::exit(0);
         }
@@ -213,7 +221,7 @@ fn make_process(process: &str) -> (String, Process) {
 
     return (
         String::from(process_split[tty_index]),
-        Process::new(String::from(process_split[pid_index]), command)
+        Process::new(String::from(process_split[pid_index]), command),
     );
 }
 
@@ -234,7 +242,7 @@ fn make_process_map(output: Output) -> HashMap<String, Vec<Process>> {
     return process_map;
 }
 
-fn print_target_not_found(target: String, output: Output) {
+fn print_target_not_found(target: &String, output: Output) {
     println!(
         "{} is not found. or {} is not started.\nps result:",
         target, target
@@ -242,7 +250,7 @@ fn print_target_not_found(target: String, output: Output) {
     println!("{:?}", String::from_utf8(output.stdout));
 }
 
-fn notify_terminate(target: String, i: u32, interval: u8) {
+fn notify_terminate(target: &String, i: u32, interval: u8) {
     Command::new("say")
         .arg("Done!")
         .output()
@@ -267,7 +275,13 @@ mod tests {
     use super::*;
 
     impl Args {
-        fn new(command: Option<String>, pid: Option<String>, tty: Option<String>, output: Option<bool>, interval: Option<u8>) -> Args {
+        fn new(
+            command: Option<String>,
+            pid: Option<String>,
+            tty: Option<String>,
+            output: Option<bool>,
+            interval: Option<u8>,
+        ) -> Args {
             return Args {
                 command,
                 pid,
@@ -280,7 +294,13 @@ mod tests {
 
     #[test]
     fn make_query() {
-        let args = Args::new(Some(String::from("command")), Some(String::from("pid")), Some(String::from("tty")), None, None);
+        let args = Args::new(
+            Some(String::from("command")),
+            Some(String::from("pid")),
+            Some(String::from("tty")),
+            None,
+            None,
+        );
         let query = args.make_query();
         assert_eq!("command", query.command.unwrap());
         assert_eq!("pid", query.pid.unwrap());
@@ -345,12 +365,15 @@ mod tests {
 
     #[test]
     fn query_new() {
-        let query = Query::new(Some(String::from("command")), Some(String::from("pid")), Some(String::from("tty")));
+        let query = Query::new(
+            Some(String::from("command")),
+            Some(String::from("pid")),
+            Some(String::from("tty")),
+        );
         assert_eq!("command", query.command.unwrap());
         assert_eq!("pid", query.pid.unwrap());
         assert_eq!("tty", query.tty.unwrap());
     }
-
 
     #[test]
     fn make_str_from_tty() {
@@ -361,18 +384,25 @@ mod tests {
 
     #[test]
     fn make_str_from_pid() {
-        let query = Query::new(None, Some(String::from("00000")), Some(String::from("ttys000")));
+        let query = Query::new(
+            None,
+            Some(String::from("00000")),
+            Some(String::from("ttys000")),
+        );
         let res = query.make_str();
         assert_eq!("(pid: 00000 tty: ttys000 )", res);
     }
 
     #[test]
     fn make_str_from_command() {
-        let query = Query::new(Some(String::from("command")), Some(String::from("00000")), Some(String::from("ttys000")));
+        let query = Query::new(
+            Some(String::from("command")),
+            Some(String::from("00000")),
+            Some(String::from("ttys000")),
+        );
         let res = query.make_str();
         assert_eq!("(command: command pid: 00000 tty: ttys000 )", res);
     }
-
 
     #[test]
     fn is_found_true() {
@@ -442,7 +472,6 @@ mod tests {
 
         let i_eight = 8u32;
         assert!(!is_every_minute(i_eight, interval_ten));
-
 
         let interval_thirty = 30u8;
         assert!(!is_every_minute(i_one, interval_thirty));
