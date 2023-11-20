@@ -212,12 +212,7 @@ fn make_process(process: &str) -> (String, Process) {
     let pid_index = 0;
     let tty_index = 1;
     let command_start_index = 3;
-    let mut command = String::from(process_split[command_start_index]);
-    if process_split.len() > (command_start_index + 1) {
-        for i in (command_start_index + 1)..process_split.len() {
-            command = command + " " + process_split[i]
-        }
-    }
+    let command = process_split[command_start_index..process_split.len()].join(" ");
 
     return (
         String::from(process_split[tty_index]),
