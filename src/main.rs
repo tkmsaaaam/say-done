@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::env::{self};
 use std::process::{Command, Output};
 use std::{thread, time};
@@ -79,7 +79,7 @@ impl Query {
         return format!("({}{}{})", c, p, t);
     }
 
-    fn is_found(&self, process_map: HashMap<String, Vec<Process>>) -> bool {
+    fn is_found(&self, process_map: BTreeMap<String, Vec<Process>>) -> bool {
         return process_map
             .iter()
             .any(|(tty, process_list)| self.is_matched(tty, process_list));
@@ -220,21 +220,23 @@ fn make_process(process: &str) -> (String, Process) {
     );
 }
 
-fn make_process_map(output: Output) -> HashMap<String, Vec<Process>> {
+fn make_process_map(output: Output) -> BTreeMap<String, Vec<Process>> {
     let self_pid = std::process::id();
-    let mut process_map: HashMap<String, Vec<Process>> = HashMap::new();
-    for line in String::from_utf8_lossy(&output.stdout).lines() {
-        if line.starts_with("  PID")
-            || line.starts_with(&self_pid.to_string())
-            || line.starts_with(PS_COMMAND_FAILED_MESSAGE)
-        {
-            continue;
-        }
-        let (tty, process) = make_process(line);
-        process_map.entry(tty).or_insert(Vec::new()).push(process);
-    }
-
-    return process_map;
+    return String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .filter(|line| {
+            !line.starts_with("  PID")
+                && !line.starts_with(&self_pid.to_string())
+                && !line.starts_with(PS_COMMAND_FAILED_MESSAGE)
+        })
+        .fold(
+            BTreeMap::new(),
+            |mut map: BTreeMap<String, Vec<Process>>, line| {
+                let (tty, process) = make_process(line);
+                map.entry(tty).or_insert_with(Vec::new).push(process);
+                map
+            },
+        );
 }
 
 fn print_target_not_found(target: &String, output: Output) {
@@ -405,7 +407,7 @@ mod tests {
         let process = Process::new(String::from("00000"), String::from("command"));
         let tty = String::from("ttys001");
         let process_list = Vec::from([process]);
-        let process_map = HashMap::from([(tty, process_list)]);
+        let process_map = BTreeMap::from([(tty, process_list)]);
         assert!(query.is_found(process_map))
     }
 
@@ -415,7 +417,7 @@ mod tests {
         let process = Process::new(String::from("00000"), String::from("command"));
         let tty = String::from("ttys001");
         let process_list = Vec::from([process]);
-        let process_map = HashMap::from([(tty, process_list)]);
+        let process_map = BTreeMap::from([(tty, process_list)]);
         assert!(!query.is_found(process_map))
     }
 
