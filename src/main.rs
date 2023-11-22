@@ -142,7 +142,7 @@ fn main() {
         let ps_result = Command::new("ps")
             .output()
             .expect(PS_COMMAND_FAILED_MESSAGE);
-        let process_map = make_process_map(ps_result.clone());
+        let process_map = make_process_map(&ps_result);
         if !query.is_found(process_map) {
             if i == 0 {
                 print_target_not_found(&query_str, ps_result);
@@ -220,9 +220,9 @@ fn make_process(process: &str) -> (String, Process) {
     );
 }
 
-fn make_process_map(output: Output) -> BTreeMap<String, Vec<Process>> {
+fn make_process_map(output: &Output) -> BTreeMap<String, Vec<Process>> {
     let self_pid = std::process::id();
-    return String::from_utf8_lossy(&output.stdout)
+    return String::from_utf8_lossy(&*output.stdout)
         .lines()
         .filter(|line| {
             !line.starts_with("  PID")
