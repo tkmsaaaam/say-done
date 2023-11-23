@@ -137,15 +137,16 @@ fn main() {
     println!("monitoring {}", &query_str);
     const MAX_MONITORING_TIME: u32 = ONE_MINUTE as u32 * 60u32 * 24u32;
     let interval = Args::parse().get_interval();
+    let start_index = 0;
 
-    for i in 0..MAX_MONITORING_TIME / interval as u32 {
+    for i in start_index..MAX_MONITORING_TIME / interval as u32 {
         let ps_result = Command::new("ps")
             .output()
             .expect(PS_COMMAND_FAILED_MESSAGE);
         let process_map = make_process_map(&ps_result);
         if !query.is_found(process_map) {
-            if i == 0 {
-                print_target_not_found(&query_str, ps_result);
+            if i == start_index {
+                print_target_not_found(&query_str, &ps_result);
             } else {
                 notify_terminate(&query_str, i, interval);
             }
@@ -239,12 +240,12 @@ fn make_process_map(output: &Output) -> BTreeMap<String, Vec<Process>> {
         );
 }
 
-fn print_target_not_found(target: &String, output: Output) {
+fn print_target_not_found(target: &String, output: &Output) {
     println!(
         "{} is not found. or {} is not started.\nps result:",
         target, target
     );
-    println!("{:?}", String::from_utf8(output.stdout));
+    println!("{:?}", String::from_utf8_lossy(&*output.stdout));
 }
 
 fn notify_terminate(target: &String, i: u32, interval: u8) {
