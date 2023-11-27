@@ -489,4 +489,24 @@ mod tests {
         assert_eq!("ttys000", tty);
         assert_eq!("sleep 30", process.command);
     }
+
+    #[test]
+    fn make_process_map_ok() {
+        let stdout= "PID TTY TIME CMD\n00000 ttys000 0:00:00 -bash\n00001 ttys000 0:00:00 ps\n00002 ttys001 0:00:00 -bash".as_bytes().to_owned();
+        let output = Output {
+            status: Default::default(),
+            stdout,
+            stderr: vec![],
+        };
+        let map = make_process_map(&output);
+        assert_eq!(3, map.len());
+        assert_eq!(2, map.get("ttys000").unwrap().len());
+        assert_eq!("-bash", map.get("ttys000").unwrap().get(0).unwrap().command);
+        assert_eq!("00000", map.get("ttys000").unwrap().get(0).unwrap().pid);
+        assert_eq!("ps", map.get("ttys000").unwrap().get(1).unwrap().command);
+        assert_eq!("00001", map.get("ttys000").unwrap().get(1).unwrap().pid);
+        assert_eq!(1, map.get("ttys001").unwrap().len());
+        assert_eq!("-bash", map.get("ttys001").unwrap().get(0).unwrap().command);
+        assert_eq!("00002", map.get("ttys001").unwrap().get(0).unwrap().pid);
+    }
 }
