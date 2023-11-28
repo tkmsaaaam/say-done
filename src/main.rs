@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
 use std::env::{self};
+use std::io::Write;
 use std::process::{Command, Output};
-use std::{thread, time};
+use std::{io, thread, time};
 
 use clap::Parser;
 
@@ -146,7 +147,9 @@ fn main() {
         let process_map = make_process_map(&ps_result);
         if !query.is_found(process_map) {
             if i == start_index {
-                print_target_not_found(&query_str, &ps_result);
+                let stdout = io::stdout();
+                let mut stdout = stdout.lock();
+                print_target_not_found(&mut stdout, &query_str, &ps_result);
             } else {
                 notify_terminate(&query_str, i, interval);
             }
@@ -240,12 +243,14 @@ fn make_process_map(output: &Output) -> BTreeMap<String, Vec<Process>> {
         );
 }
 
-fn print_target_not_found(target: &String, output: &Output) {
-    println!(
+fn print_target_not_found<W: Write>(w: &mut W, target: &str, output: &Output) {
+    writeln!(
+        w,
         "{} is not found. or {} is not started.\nps result:",
         target, target
-    );
-    println!("{:?}", String::from_utf8_lossy(&*output.stdout));
+    )
+    .expect("can not writeln");
+    writeln!(w, "{:?}", String::from_utf8_lossy(&*output.stdout)).expect("can not writeln");
 }
 
 fn notify_terminate(target: &String, i: u32, interval: u8) {
@@ -508,5 +513,20 @@ mod tests {
         assert_eq!(1, map.get("ttys001").unwrap().len());
         assert_eq!("-bash", map.get("ttys001").unwrap().get(0).unwrap().command);
         assert_eq!("00002", map.get("ttys001").unwrap().get(0).unwrap().pid);
+    }
+
+    #[test]
+    fn print_target_not_found_ok() {
+        let mut buf = Vec::new();
+        let stdout= "PID TTY TIME CMD\n00000 ttys000 0:00:00 -bash\n00001 ttys000 0:00:00 ps\n00002 ttys001 0:00:00 -bash".as_bytes().to_owned();
+        let output = Output {
+            status: Default::default(),
+            stdout,
+            stderr: vec![],
+        };
+        print_target_not_found(&mut buf, "echo", &output);
+        let expected = "echo is not found. or echo is not started.\nps result:\n\"PID TTY TIME CMD\\n00000 ttys000 0:00:00 -bash\\n00001 ttys000 0:00:00 ps\\n00002 ttys001 0:00:00 -bash\"\n".as_bytes().to_owned();
+
+        assert_eq!(expected, buf);
     }
 }
