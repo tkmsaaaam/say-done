@@ -166,7 +166,7 @@ fn main() {
 fn make_query_element(element_name: &str) -> Option<String> {
     println!("{}:", element_name);
     let mut element = String::new();
-    std::io::stdin().read_line(&mut element).expect("");
+    io::stdin().read_line(&mut element).expect("");
     if element.trim_end().is_empty() {
         return None;
     } else {
@@ -250,7 +250,7 @@ fn print_target_not_found<W: Write>(w: &mut W, target: &str, output: &Output) {
         target, target
     )
     .expect("can not writeln");
-    writeln!(w, "{:?}", String::from_utf8_lossy(&*output.stdout)).expect("can not writeln");
+    writeln!(w, "{}", String::from_utf8_lossy(&*output.stdout)).expect("can not writeln");
 }
 
 fn notify_terminate(target: &String, i: u32, interval: u8) {
@@ -525,7 +525,7 @@ mod tests {
             stderr: vec![],
         };
         print_target_not_found(&mut buf, "echo", &output);
-        let expected = "echo is not found. or echo is not started.\nps result:\n\"PID TTY TIME CMD\\n00000 ttys000 0:00:00 -bash\\n00001 ttys000 0:00:00 ps\\n00002 ttys001 0:00:00 -bash\"\n".as_bytes().to_owned();
+        let expected = "echo is not found. or echo is not started.\nps result:\nPID TTY TIME CMD\n00000 ttys000 0:00:00 -bash\n00001 ttys000 0:00:00 ps\n00002 ttys001 0:00:00 -bash\n".as_bytes().to_owned();
 
         assert_eq!(expected, buf);
     }
