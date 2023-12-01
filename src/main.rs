@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use std::env::{self};
-use std::io::Write;
+use std::io::{BufRead, Write};
 use std::process::{Command, Output};
 use std::{io, thread, time};
 
@@ -163,10 +163,14 @@ fn main() {
     println!("{} has been running over an hour.", query_str);
 }
 
-fn make_query_element(element_name: &str) -> Option<String> {
-    println!("{}:", element_name);
+fn make_query_element<R: BufRead, W: Write>(
+    mut reader: R,
+    w: &mut W,
+    element_name: &str,
+) -> Option<String> {
+    writeln!(w, "{}:", element_name).expect("can not write element_name");
     let mut element = String::new();
-    io::stdin().read_line(&mut element).expect("");
+    reader.read_line(&mut element).expect("");
     if element.trim_end().is_empty() {
         return None;
     } else {
@@ -192,9 +196,12 @@ fn make_query() -> Option<Query> {
         )
     );
 
-    let command = make_query_element("command");
-    let pid = make_query_element("pid");
-    let tty = make_query_element("tty");
+    let stdout = io::stdout();
+    let mut stdout = stdout.lock();
+
+    let command = make_query_element(io::stdin().lock(), &mut stdout, "command");
+    let pid = make_query_element(io::stdin().lock(), &mut stdout, "pid");
+    let tty = make_query_element(io::stdin().lock(), &mut stdout, "tty");
 
     return if command.is_none() && pid.is_none() && tty.is_none() {
         None
@@ -468,6 +475,15 @@ mod tests {
     }
 
     #[test]
+    fn make_query_element_is_empty() {
+        let command = b"ps";
+        let mut buf = vec![];
+        make_query_element(&command[..], &mut buf, "element_name");
+        let expected = "element_name:\n".as_bytes().to_owned();
+        assert_eq!(expected, buf);
+    }
+
+    #[test]
     fn is_every_minute_false() {
         let i_one = 1u32;
         let interval_ten = 10u8;
@@ -517,7 +533,7 @@ mod tests {
 
     #[test]
     fn print_target_not_found_ok() {
-        let mut buf = Vec::new();
+        let mut buf = vec![];
         let stdout= "PID TTY TIME CMD\n00000 ttys000 0:00:00 -bash\n00001 ttys000 0:00:00 ps\n00002 ttys001 0:00:00 -bash".as_bytes().to_owned();
         let output = Output {
             status: Default::default(),
