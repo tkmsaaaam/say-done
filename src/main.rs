@@ -196,12 +196,9 @@ fn make_query() -> Option<Query> {
         )
     );
 
-    let stdout = io::stdout();
-    let mut stdout = stdout.lock();
-
-    let command = make_query_element(io::stdin().lock(), &mut stdout, "command");
-    let pid = make_query_element(io::stdin().lock(), &mut stdout, "pid");
-    let tty = make_query_element(io::stdin().lock(), &mut stdout, "tty");
+    let command = make_query_element(io::stdin().lock(), &mut io::stdout().lock(), "command");
+    let pid = make_query_element(io::stdin().lock(), &mut io::stdout().lock(), "pid");
+    let tty = make_query_element(io::stdin().lock(), &mut io::stdout().lock(), "tty");
 
     return if command.is_none() && pid.is_none() && tty.is_none() {
         None
