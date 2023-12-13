@@ -42,18 +42,12 @@ impl Args {
 
     fn is_output(&self) -> bool {
         const DEFAULT_OUTPUT: bool = true;
-        return match self.output {
-            Some(o) => o,
-            None => DEFAULT_OUTPUT,
-        };
+        return self.output.unwrap_or_else(|| DEFAULT_OUTPUT);
     }
 
     fn get_interval(&self) -> u8 {
         const DEFAULT_INTERVAL: u8 = 10;
-        return match self.interval {
-            Some(i) => i,
-            None => DEFAULT_INTERVAL,
-        };
+        return self.interval.unwrap_or_else(|| DEFAULT_INTERVAL);
     }
 }
 
