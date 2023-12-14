@@ -11,7 +11,7 @@ struct Args {
     #[arg(short, long)]
     command: Option<String>,
     #[arg(short, long)]
-    pid: Option<String>,
+    pid: Option<i16>,
     #[arg(short, long)]
     tty: Option<String>,
     #[arg(short, long)]
@@ -22,12 +22,12 @@ struct Args {
 
 struct Query {
     command: Option<String>,
-    pid: Option<String>,
+    pid: Option<i16>,
     tty: Option<String>,
 }
 
 struct Process {
-    pid: String,
+    pid: i16,
     command: String,
 }
 
@@ -52,7 +52,7 @@ impl Args {
 }
 
 impl Query {
-    fn new(command: Option<String>, pid: Option<String>, tty: Option<String>) -> Query {
+    fn new(command: Option<String>, pid: Option<i16>, tty: Option<String>) -> Query {
         return Query { command, pid, tty };
     }
 
@@ -63,7 +63,7 @@ impl Query {
         };
 
         let p = match self.pid {
-            Some(ref pid) => String::from("pid: ") + pid + " ",
+            Some(ref pid) => String::from("pid: ") + &pid.to_string() + " ",
             None => String::new(),
         };
 
@@ -114,7 +114,7 @@ impl Query {
 }
 
 impl Process {
-    fn new(pid: String, command: String) -> Process {
+    fn new(pid: i16, command: String) -> Process {
         return Process { pid, command };
     }
 }
@@ -191,12 +191,16 @@ fn make_query() -> Option<Query> {
     );
 
     let command = make_query_element(io::stdin().lock(), &mut io::stdout().lock(), "command");
-    let pid = make_query_element(io::stdin().lock(), &mut io::stdout().lock(), "pid");
+    let pid_str = make_query_element(io::stdin().lock(), &mut io::stdout().lock(), "pid");
     let tty = make_query_element(io::stdin().lock(), &mut io::stdout().lock(), "tty");
 
-    return if command.is_none() && pid.is_none() && tty.is_none() {
+    return if command.is_none() && pid_str.is_none() && tty.is_none() {
         None
     } else {
+        let pid = match pid_str {
+            Some(p) => Some(p.parse().unwrap()),
+            None => None,
+        };
         Some(Query::new(command, pid, tty))
     };
 }
@@ -218,7 +222,7 @@ fn make_process(process: &str) -> (String, Process) {
 
     return (
         String::from(process_split[tty_index]),
-        Process::new(String::from(process_split[pid_index]), command),
+        Process::new(process_split[pid_index].parse().unwrap(), command),
     );
 }
 
@@ -278,7 +282,7 @@ mod tests {
     impl Args {
         fn new(
             command: Option<String>,
-            pid: Option<String>,
+            pid: Option<i16>,
             tty: Option<String>,
             output: Option<bool>,
             interval: Option<u8>,
@@ -297,14 +301,14 @@ mod tests {
     fn make_query() {
         let args = Args::new(
             Some(String::from("command")),
-            Some(String::from("pid")),
+            Some(11111),
             Some(String::from("tty")),
             None,
             None,
         );
         let query = args.make_query();
         assert_eq!("command", query.command.unwrap());
-        assert_eq!("pid", query.pid.unwrap());
+        assert_eq!(11111, query.pid.unwrap());
         assert_eq!("tty", query.tty.unwrap());
     }
 
@@ -316,7 +320,7 @@ mod tests {
 
     #[test]
     fn is_some_true_pid() {
-        let args = Args::new(None, Some(String::from("pid")), None, None, None);
+        let args = Args::new(None, Some(00000), None, None, None);
         assert!(args.is_some());
     }
 
@@ -368,11 +372,11 @@ mod tests {
     fn query_new() {
         let query = Query::new(
             Some(String::from("command")),
-            Some(String::from("pid")),
+            Some(11111),
             Some(String::from("tty")),
         );
         assert_eq!("command", query.command.unwrap());
-        assert_eq!("pid", query.pid.unwrap());
+        assert_eq!(11111, query.pid.unwrap());
         assert_eq!("tty", query.tty.unwrap());
     }
 
@@ -385,30 +389,26 @@ mod tests {
 
     #[test]
     fn make_str_from_pid() {
-        let query = Query::new(
-            None,
-            Some(String::from("00000")),
-            Some(String::from("ttys000")),
-        );
+        let query = Query::new(None, Some(11111), Some(String::from("ttys000")));
         let res = query.make_str();
-        assert_eq!("(pid: 00000 tty: ttys000 )", res);
+        assert_eq!("(pid: 11111 tty: ttys000 )", res);
     }
 
     #[test]
     fn make_str_from_command() {
         let query = Query::new(
             Some(String::from("command")),
-            Some(String::from("00000")),
+            Some(11111),
             Some(String::from("ttys000")),
         );
         let res = query.make_str();
-        assert_eq!("(command: command pid: 00000 tty: ttys000 )", res);
+        assert_eq!("(command: command pid: 11111 tty: ttys000 )", res);
     }
 
     #[test]
     fn is_found_true() {
         let query = Query::new(Some(String::from("command")), None, None);
-        let process = Process::new(String::from("00000"), String::from("command"));
+        let process = Process::new(11111, String::from("command"));
         let tty = String::from("ttys001");
         let process_list = Vec::from([process]);
         let process_map = BTreeMap::from([(tty, process_list)]);
@@ -418,7 +418,7 @@ mod tests {
     #[test]
     fn is_found_false() {
         let query = Query::new(Some(String::from("ps")), None, None);
-        let process = Process::new(String::from("00000"), String::from("command"));
+        let process = Process::new(11111, String::from("command"));
         let tty = String::from("ttys001");
         let process_list = Vec::from([process]);
         let process_map = BTreeMap::from([(tty, process_list)]);
@@ -428,7 +428,7 @@ mod tests {
     #[test]
     fn is_matched_true() {
         let query = Query::new(Some(String::from("command")), None, None);
-        let process = Process::new(String::from("00000"), String::from("command"));
+        let process = Process::new(11111, String::from("command"));
         let is_continue = query.is_matched("ttys001", Vec::from([process]).as_ref());
         assert!(is_continue);
     }
@@ -436,15 +436,15 @@ mod tests {
     #[test]
     fn is_matched_false() {
         let query = Query::new(Some(String::from("ps")), None, None);
-        let process = Process::new(String::from("00000"), String::from("command"));
+        let process = Process::new(11111, String::from("command"));
         let is_continue = query.is_matched("ttys001", Vec::from([process]).as_ref());
         assert!(!is_continue);
     }
 
     #[test]
     fn process_new() {
-        let process = Process::new(String::from("pid"), String::from("command"));
-        assert_eq!("pid", process.pid);
+        let process = Process::new(11111, String::from("command"));
+        assert_eq!(11111, process.pid);
         assert_eq!("command", process.command);
     }
 
@@ -495,31 +495,31 @@ mod tests {
 
     #[test]
     fn make_process_ok() {
-        let process = "00000 ttys000    0:00.00 sleep 30";
+        let process = "11111 ttys000    0:00.00 sleep 30";
         let (tty, process) = make_process(process);
-        assert_eq!("00000", process.pid);
+        assert_eq!(11111, process.pid);
         assert_eq!("ttys000", tty);
         assert_eq!("sleep 30", process.command);
     }
 
     #[test]
     fn make_process_map_ok() {
-        let stdout= "PID TTY TIME CMD\n00000 ttys000 0:00:00 -bash\n00001 ttys000 0:00:00 ps\n00002 ttys001 0:00:00 -bash".as_bytes().to_owned();
+        let stdout= "  PID TTY TIME CMD\n11111 ttys000 0:00:00 -bash\n11112 ttys000 0:00:00 ps\n11113 ttys001 0:00:00 -bash".as_bytes().to_owned();
         let output = Output {
             status: Default::default(),
             stdout,
             stderr: vec![],
         };
         let map = make_process_map(&output);
-        assert_eq!(3, map.len());
+        assert_eq!(2, map.len());
         assert_eq!(2, map.get("ttys000").unwrap().len());
         assert_eq!("-bash", map.get("ttys000").unwrap().get(0).unwrap().command);
-        assert_eq!("00000", map.get("ttys000").unwrap().get(0).unwrap().pid);
+        assert_eq!(11111, map.get("ttys000").unwrap().get(0).unwrap().pid);
         assert_eq!("ps", map.get("ttys000").unwrap().get(1).unwrap().command);
-        assert_eq!("00001", map.get("ttys000").unwrap().get(1).unwrap().pid);
+        assert_eq!(11112, map.get("ttys000").unwrap().get(1).unwrap().pid);
         assert_eq!(1, map.get("ttys001").unwrap().len());
         assert_eq!("-bash", map.get("ttys001").unwrap().get(0).unwrap().command);
-        assert_eq!("00002", map.get("ttys001").unwrap().get(0).unwrap().pid);
+        assert_eq!(11113, map.get("ttys001").unwrap().get(0).unwrap().pid);
     }
 
     #[test]
