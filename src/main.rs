@@ -11,7 +11,7 @@ struct Args {
     #[arg(short, long)]
     command: Option<String>,
     #[arg(short, long)]
-    pid: Option<i16>,
+    pid: Option<i32>,
     #[arg(short, long)]
     tty: Option<String>,
     #[arg(short, long)]
@@ -22,12 +22,12 @@ struct Args {
 
 struct Query {
     command: Option<String>,
-    pid: Option<i16>,
+    pid: Option<i32>,
     tty: Option<String>,
 }
 
 struct Process {
-    pid: i16,
+    pid: i32,
     command: String,
 }
 
@@ -52,7 +52,7 @@ impl Args {
 }
 
 impl Query {
-    fn new(command: Option<String>, pid: Option<i16>, tty: Option<String>) -> Query {
+    fn new(command: Option<String>, pid: Option<i32>, tty: Option<String>) -> Query {
         return Query { command, pid, tty };
     }
 
@@ -114,7 +114,7 @@ impl Query {
 }
 
 impl Process {
-    fn new(pid: i16, command: String) -> Process {
+    fn new(pid: i32, command: String) -> Process {
         return Process { pid, command };
     }
 }
@@ -282,7 +282,7 @@ mod tests {
     impl Args {
         fn new(
             command: Option<String>,
-            pid: Option<i16>,
+            pid: Option<i32>,
             tty: Option<String>,
             output: Option<bool>,
             interval: Option<u8>,
