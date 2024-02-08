@@ -53,6 +53,13 @@ impl Args {
 
 impl Query {
     fn new(command: Option<String>, pid: Option<u32>, tty: Option<String>) -> Query {
+        if pid.is_some() && pid.unwrap() > 99999 {
+            return Query {
+                command,
+                pid: None,
+                tty,
+            };
+        }
         return Query { command, pid, tty };
     }
 
