@@ -100,7 +100,7 @@ impl Query {
         }
 
         match self.tty {
-            Some(ref tty) if target_tty.eq(tty) && target_process_list.len() > 1 => {
+            Some(ref tty) if target_tty.eq(tty) && target_process_list.len() > 0 => {
                 return true;
             }
             _ => (),
@@ -186,16 +186,18 @@ fn make_query() -> Option<Query> {
         let query = args.make_query();
         return Some(query);
     }
-    println!("args is not present.");
-    println!(
-        "Process: \n{}",
-        String::from_utf8_lossy(
-            &Command::new("ps")
-                .output()
-                .expect(PS_COMMAND_FAILED_MESSAGE)
-                .stdout
-        )
-    );
+    println!("Args is not present. Choose from these processes.");
+    let ps_result = Command::new("ps")
+        .output()
+        .expect(PS_COMMAND_FAILED_MESSAGE);
+    make_process_map(&ps_result).iter().for_each(|tty| {
+        tty.1.iter().for_each(|process| {
+            println!(
+                "tty: {}, pid: {}, command: {}",
+                tty.0, process.pid, process.command
+            );
+        })
+    });
 
     let command = make_query_element(io::stdin().lock(), &mut io::stdout().lock(), "command");
     let pid_str = make_query_element(io::stdin().lock(), &mut io::stdout().lock(), "pid");
@@ -235,6 +237,7 @@ fn make_process(process: &str) -> (String, Process) {
 
 fn make_process_map(output: &Output) -> BTreeMap<String, Vec<Process>> {
     let self_pid = std::process::id();
+    let shells = vec!["-bash", "-zsh"];
     return String::from_utf8_lossy(&*output.stdout)
         .lines()
         .filter(|line| {
@@ -246,7 +249,9 @@ fn make_process_map(output: &Output) -> BTreeMap<String, Vec<Process>> {
             BTreeMap::new(),
             |mut map: BTreeMap<String, Vec<Process>>, line| {
                 let (tty, process) = make_process(line);
-                map.entry(tty).or_insert_with(Vec::new).push(process);
+                if !shells.contains(&&*process.command) {
+                    map.entry(tty).or_insert_with(Vec::new).push(process);
+                }
                 map
             },
         );
@@ -511,28 +516,23 @@ mod tests {
 
     #[test]
     fn make_process_map_ok() {
-        let stdout= "  PID TTY TIME CMD\n11111 ttys000 0:00:00 -bash\n11112 ttys000 0:00:00 ps\n11113 ttys001 0:00:00 -bash".as_bytes().to_owned();
+        let stdout = "  PID TTY TIME CMD\n11111 ttys000 0:00:00 -bash\n11112 ttys000 0:00:00 ps\n11113 ttys001 0:00:00 -bash".as_bytes().to_owned();
         let output = Output {
             status: Default::default(),
             stdout,
             stderr: vec![],
         };
         let map = make_process_map(&output);
-        assert_eq!(2, map.len());
-        assert_eq!(2, map.get("ttys000").unwrap().len());
-        assert_eq!("-bash", map.get("ttys000").unwrap().get(0).unwrap().command);
-        assert_eq!(11111, map.get("ttys000").unwrap().get(0).unwrap().pid);
-        assert_eq!("ps", map.get("ttys000").unwrap().get(1).unwrap().command);
-        assert_eq!(11112, map.get("ttys000").unwrap().get(1).unwrap().pid);
-        assert_eq!(1, map.get("ttys001").unwrap().len());
-        assert_eq!("-bash", map.get("ttys001").unwrap().get(0).unwrap().command);
-        assert_eq!(11113, map.get("ttys001").unwrap().get(0).unwrap().pid);
+        assert_eq!(1, map.len());
+        assert_eq!(1, map.get("ttys000").unwrap().len());
+        assert_eq!("ps", map.get("ttys000").unwrap().get(0).unwrap().command);
+        assert_eq!(11112, map.get("ttys000").unwrap().get(0).unwrap().pid);
     }
 
     #[test]
     fn print_target_not_found_ok() {
         let mut buf = vec![];
-        let stdout= "PID TTY TIME CMD\n00000 ttys000 0:00:00 -bash\n00001 ttys000 0:00:00 ps\n00002 ttys001 0:00:00 -bash".as_bytes().to_owned();
+        let stdout = "PID TTY TIME CMD\n00000 ttys000 0:00:00 -bash\n00001 ttys000 0:00:00 ps\n00002 ttys001 0:00:00 -bash".as_bytes().to_owned();
         let output = Output {
             status: Default::default(),
             stdout,
