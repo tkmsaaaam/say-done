@@ -100,7 +100,7 @@ impl Query {
         }
 
         match self.tty {
-            Some(ref tty) if target_tty.eq(tty) && target_process_list.len() > 0 => {
+            Some(ref tty) if target_tty.eq(tty) && !target_process_list.is_empty() => {
                 return true;
             }
             _ => (),
