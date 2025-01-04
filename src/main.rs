@@ -33,21 +33,21 @@ struct Process {
 
 impl Args {
     fn make_query(self) -> Query {
-        return Query::new(self.command, self.pid, self.tty);
+        Query::new(self.command, self.pid, self.tty)
     }
 
     fn is_some(&self) -> bool {
-        return self.command.is_some() || self.pid.is_some() || self.tty.is_some();
+        self.command.is_some() || self.pid.is_some() || self.tty.is_some()
     }
 
     fn is_output(&self) -> bool {
         const DEFAULT_OUTPUT: bool = true;
-        return self.output.unwrap_or_else(|| DEFAULT_OUTPUT);
+        self.output.unwrap_or(DEFAULT_OUTPUT)
     }
 
     fn get_interval(&self) -> u8 {
         const DEFAULT_INTERVAL: u8 = 10;
-        return self.interval.unwrap_or_else(|| DEFAULT_INTERVAL);
+        self.interval.unwrap_or(DEFAULT_INTERVAL)
     }
 }
 
@@ -60,7 +60,7 @@ impl Query {
                 tty,
             };
         }
-        return Query { command, pid, tty };
+        Query { command, pid, tty }
     }
 
     fn make_str(&self) -> String {
@@ -78,13 +78,13 @@ impl Query {
             Some(ref tty) => String::from("tty: ") + tty + " ",
             None => String::new(),
         };
-        return format!("({}{}{})", c, p, t);
+        format!("({}{}{})", c, p, t)
     }
 
     fn is_found(&self, process_map: BTreeMap<String, Vec<Process>>) -> bool {
-        return process_map
+        process_map
             .iter()
-            .any(|(tty, process_list)| self.is_matched(tty, process_list));
+            .any(|(tty, process_list)| self.is_matched(tty, process_list))
     }
 
     fn is_matched(&self, target_tty: &str, target_process_list: &Vec<Process>) -> bool {
@@ -116,13 +116,13 @@ impl Query {
             }
             _ => (),
         }
-        return false;
+        false
     }
 }
 
 impl Process {
     fn new(pid: u32, command: String) -> Process {
-        return Process { pid, command };
+        Process { pid, command }
     }
 }
 
@@ -173,7 +173,7 @@ fn make_query_element<R: BufRead, W: Write>(
     let mut element = String::new();
     reader.read_line(&mut element).expect("");
     if element.trim_end().is_empty() {
-        return None;
+        None
     } else {
         Some(String::from(element.trim_end()))
     }
@@ -203,23 +203,20 @@ fn make_query() -> Option<Query> {
     let pid_str = make_query_element(io::stdin().lock(), &mut io::stdout().lock(), "pid");
     let tty = make_query_element(io::stdin().lock(), &mut io::stdout().lock(), "tty");
 
-    return if command.is_none() && pid_str.is_none() && tty.is_none() {
+    if command.is_none() && pid_str.is_none() && tty.is_none() {
         None
     } else {
-        let pid = match pid_str {
-            Some(p) => Some(p.parse().unwrap()),
-            None => None,
-        };
+        let pid = pid_str.map(|p| p.parse().unwrap());
         Some(Query::new(command, pid, tty))
-    };
+    }
 }
 
 fn is_every_minute(i: u32, interval: u8) -> bool {
-    return i % (ONE_MINUTE / interval) as u32 == 0;
+    i % (ONE_MINUTE / interval) as u32 == 0
 }
 
 fn elapsed_minute(i: u32, interval: u8) -> u32 {
-    return i / (ONE_MINUTE / interval) as u32;
+    i / (ONE_MINUTE / interval) as u32
 }
 
 fn make_process(process: &str) -> (String, Process) {
@@ -229,16 +226,16 @@ fn make_process(process: &str) -> (String, Process) {
     let command_start_index = 3;
     let command = process_split[command_start_index..process_split.len()].join(" ");
 
-    return (
+    (
         String::from(process_split[tty_index]),
         Process::new(process_split[pid_index].parse().unwrap(), command),
-    );
+    )
 }
 
 fn make_process_map(output: &Output) -> BTreeMap<String, Vec<Process>> {
     let self_pid = std::process::id();
-    let shells = vec!["-bash", "-zsh"];
-    return String::from_utf8_lossy(&*output.stdout)
+    let shells = ["-bash", "-zsh"];
+    String::from_utf8_lossy(&output.stdout)
         .lines()
         .filter(|line| {
             !line.starts_with("  PID")
@@ -250,11 +247,11 @@ fn make_process_map(output: &Output) -> BTreeMap<String, Vec<Process>> {
             |mut map: BTreeMap<String, Vec<Process>>, line| {
                 let (tty, process) = make_process(line);
                 if !shells.contains(&&*process.command) {
-                    map.entry(tty).or_insert_with(Vec::new).push(process);
+                    map.entry(tty).or_default().push(process);
                 }
                 map
             },
-        );
+        )
 }
 
 fn print_target_not_found<W: Write>(w: &mut W, target: &str, output: &Output) {
@@ -264,7 +261,7 @@ fn print_target_not_found<W: Write>(w: &mut W, target: &str, output: &Output) {
         target, target
     )
     .expect("can not writeln");
-    writeln!(w, "{}", String::from_utf8_lossy(&*output.stdout)).expect("can not writeln");
+    writeln!(w, "{}", String::from_utf8_lossy(&output.stdout)).expect("can not writeln");
 }
 
 fn notify_terminate(target: &String, i: u32, interval: u8) {
@@ -275,7 +272,7 @@ fn notify_terminate(target: &String, i: u32, interval: u8) {
     println!("{} was finished. time: {}s", target, i * interval as u32);
     if env::consts::OS == "macos" {
         let arg = String::from("display notification \"")
-            + &target
+            + target
             + " was ended.\" with title \""
             + env!("CARGO_PKG_NAME")
             + "\""; // display notification "CMD was ended." with title "CMD"
@@ -299,13 +296,13 @@ mod tests {
             output: Option<bool>,
             interval: Option<u8>,
         ) -> Args {
-            return Args {
+            Args {
                 command,
                 pid,
                 tty,
                 output,
                 interval,
-            };
+            }
         }
     }
 
@@ -525,8 +522,8 @@ mod tests {
         let map = make_process_map(&output);
         assert_eq!(1, map.len());
         assert_eq!(1, map.get("ttys000").unwrap().len());
-        assert_eq!("ps", map.get("ttys000").unwrap().get(0).unwrap().command);
-        assert_eq!(11112, map.get("ttys000").unwrap().get(0).unwrap().pid);
+        assert_eq!("ps", map.get("ttys000").unwrap().first().unwrap().command);
+        assert_eq!(11112, map.get("ttys000").unwrap().first().unwrap().pid);
     }
 
     #[test]
