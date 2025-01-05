@@ -87,7 +87,7 @@ impl Query {
             .any(|(tty, process_list)| self.is_matched(tty, process_list))
     }
 
-    fn is_matched(&self, target_tty: &str, target_process_list: &Vec<Process>) -> bool {
+    fn is_matched(&self, target_tty: &str, target_process_list: &[Process]) -> bool {
         match self.pid {
             Some(ref pid)
                 if target_process_list
